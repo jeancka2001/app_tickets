@@ -64,7 +64,7 @@ const Eventos: React.FC = () => {
           }
         );
         if (data.success) {
-          setEventos(data.data);
+          setEventos(data.data); 
         } else {
           setError('No se pudieron cargar los eventos');
         }
