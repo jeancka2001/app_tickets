@@ -51,7 +51,7 @@ const Eventos: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
-
+ 
   useEffect(() => {
     const cargarEventos = async () => { 
       try {
