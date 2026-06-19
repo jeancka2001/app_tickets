@@ -53,7 +53,7 @@ const Eventos: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
-    const cargarEventos = async () => {
+    const cargarEventos = async () => { 
       try {
         const { data } = await axios.get(
           'https://api.t-ickets.com/ms_login/listareventos/ACTIVO/',
