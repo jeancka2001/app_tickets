@@ -13,6 +13,7 @@ import {
   IonModal,
   IonInput,
   IonBadge,
+  IonToast,
 } from '@ionic/react';
 import {
   ticketOutline,
@@ -25,6 +26,7 @@ import {
   checkmarkCircleOutline,
   timeOutline,
   refreshOutline,
+  downloadOutline,
 } from 'ionicons/icons';
 import axios from 'axios';
 import './Boletos.css';
@@ -77,6 +79,8 @@ const Boletos: React.FC = () => {
   const [cedula, setCedula] = useState('');
   const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [descargando, setDescargando] = useState<number | null>(null);
+  const [errorDescarga, setErrorDescarga] = useState('');
 
   useEffect(() => {
     const c = getCedulaGuardada();
@@ -111,6 +115,36 @@ const Boletos: React.FC = () => {
       setError('Error al cargar las entradas');
     } finally {
       setCargando(false);
+    }
+  };
+
+  const descargarBoleto = async (ticket: Ticket) => {
+    setDescargando(ticket.id);
+    try {
+      const { data } = await axios.post(
+        'https://api.t-ickets.com/ticket/api/v1/ticket_pdf_link',
+        {
+          cedula: cedula || ticket.cedula,
+          codigoEvento: ticket.codigoEvento,
+          id_ticket_usuarios: ticket.id,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'authorization-ticket': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+          },
+        }
+      );
+      if (data.success && data.link) {
+        const link = data.link.replace('https://flash.t-ickets.com', 'https://api.t-ickets.com');
+        window.open(link, '_blank');
+      } else {
+        setErrorDescarga('No se pudo generar el PDF');
+      }
+    } catch {
+      setErrorDescarga('Error al generar el boleto');
+    } finally {
+      setDescargando(null);
     }
   };
 
@@ -203,13 +237,25 @@ const Boletos: React.FC = () => {
                     <IonIcon icon={locationOutline} />
                     <span>{ticket.localidad}</span>
                   </div>
-                  <IonButton
-                    size="small"
-                    className="btn-ver-entrada"
-                    onClick={() => abrirEntrada(ticket)}
-                  >
-                    Ver entrada
-                  </IonButton>
+                  <div className="boleto-acciones">
+                    <IonButton
+                      size="small"
+                      className="btn-ver-entrada"
+                      onClick={() => abrirEntrada(ticket)}
+                    >
+                      Ver entrada
+                    </IonButton>
+                    <IonButton
+                      size="small"
+                      fill="outline"
+                      className="btn-descargar-card"
+                      disabled={descargando === ticket.id}
+                      onClick={() => descargarBoleto(ticket)}
+                    >
+                      <IonIcon icon={descargando === ticket.id ? refreshOutline : downloadOutline} slot="start" />
+                      {descargando === ticket.id ? 'Generando...' : 'Descargar'}
+                    </IonButton>
+                  </div>
                 </div>
               </div>
             ))}
@@ -310,10 +356,29 @@ const Boletos: React.FC = () => {
                   </div>
                 </div>
 
+                <IonButton
+                  expand="block"
+                  className="btn-descargar-modal"
+                  disabled={descargando === ticketSeleccionado.id}
+                  onClick={() => descargarBoleto(ticketSeleccionado)}
+                >
+                  <IonIcon icon={descargando === ticketSeleccionado.id ? refreshOutline : downloadOutline} slot="start" />
+                  {descargando === ticketSeleccionado.id ? 'Generando PDF...' : 'Descargar boleto'}
+                </IonButton>
+
               </div>
             )}
           </IonContent>
         </IonModal>
+
+        <IonToast
+          isOpen={!!errorDescarga}
+          message={errorDescarga}
+          duration={3000}
+          color="danger"
+          position="bottom"
+          onDidDismiss={() => setErrorDescarga('')}
+        />
 
       </IonContent>
     </IonPage>
