@@ -1,0 +1,118 @@
+.perfil-toolbar {
+  --background: #0f3460;
+  --color: #ffffff;
+  --border-color: transparent;
+}
+
+.perfil-content {
+  --background: #f4f6fb;
+}
+
+.perfil-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(160deg, #0f3460 0%, #1a4a8a 100%);
+  padding: 32px 24px 36px;
+}
+
+.avatar-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.avatar-inicial {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.perfil-nombre {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.perfil-rol {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.perfil-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9da5b4;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 20px 16px 8px;
+}
+
+.perfil-items {
+  background: #ffffff;
+  border-radius: 16px;
+  margin: 0 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(15, 52, 96, 0.08);
+}
+
+.perfil-item {
+  --background: #ffffff;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 64px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.perfil-item:last-child {
+  border-bottom: none;
+}
+
+.item-icon {
+  font-size: 1.3rem;
+  color: #0f3460;
+  margin-right: 4px;
+}
+
+.item-label {
+  font-size: 0.75rem;
+  color: #9da5b4;
+  margin: 0 0 2px;
+}
+
+.item-value {
+  font-size: 0.9rem;
+  color: #0d1b2a;
+  font-weight: 500;
+  margin: 0;
+}
+
+.chevron {
+  font-size: 1rem;
+  color: #c0cbe0;
+}
+
+.perfil-logout {
+  padding: 28px 16px 16px;
+}
+
+.btn-logout {
+  --background: #fff;
+  --background-activated: #fef0f0;
+  --border-radius: 12px;
+  --color: #e74c3c;
+  --box-shadow: 0 2px 12px rgba(231, 76, 60, 0.15);
+  font-weight: 600;
+  height: 50px;
+  border: 1px solid #fcd9d9;
+}

@@ -1,0 +1,131 @@
+.eventos-toolbar {
+  --background: #0f3460;
+  --color: #ffffff;
+  --border-color: transparent;
+}
+
+.search-toolbar {
+  --background: #0f3460;
+  --border-color: transparent;
+  padding-bottom: 8px;
+}
+
+.eventos-search {
+  --background: rgba(255,255,255,0.15);
+  --color: #ffffff;
+  --placeholder-color: rgba(255,255,255,0.6);
+  --icon-color: rgba(255,255,255,0.7);
+  --border-radius: 10px;
+  --box-shadow: none;
+}
+
+.eventos-content {
+  --background: #f4f6fb;
+}
+
+.loading-state,
+.error-state,
+.empty-search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: #9da5b4;
+}
+
+.loading-spinner {
+  color: #0f3460;
+  margin-bottom: 12px;
+}
+
+.eventos-list {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.evento-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 52, 96, 0.1);
+}
+
+.evento-banner {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  background: #e0e6f0;
+}
+
+.evento-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.evento-body {
+  padding: 14px 16px;
+}
+
+.evento-nombre {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0d1b2a;
+  margin: 0 0 10px;
+  line-height: 1.3;
+}
+
+.evento-detalle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7a90;
+  font-size: 0.82rem;
+  margin-bottom: 5px;
+}
+
+.evento-detalle ion-icon {
+  font-size: 0.95rem;
+  color: #0f3460;
+  flex-shrink: 0;
+}
+
+.evento-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.evento-precio {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f3460;
+}
+
+.evento-precio ion-icon {
+  font-size: 1rem;
+}
+
+.btn-comprar {
+  --background: #0f3460;
+  --background-activated: #0d1b2a;
+  --border-radius: 8px;
+  --color: #ffffff;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  height: 34px;
+  margin: 0;
+}
