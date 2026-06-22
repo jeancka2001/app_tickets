@@ -1,5 +1,5 @@
 .login-content {
-  --background: linear-gradient(160deg, #0d1b2a 0%, #1b2a4a 50%, #0f3460 100%);
+  --background: linear-gradient(160deg, #1a1e52 0%, #1b2a4a 50%, #2d358c 100%);
 }
 
 .login-container {
@@ -37,23 +37,23 @@
   text-align: center;
   font-size: 1.4rem;
   font-weight: 700;
-  color: #0d1b2a;
+  color: #1a1e52;
   margin: 0 0 28px;
   letter-spacing: 0.3px;
 }
 
 .login-input {
   --border-radius: 10px;
-  --color: #0d1b2a;
+  --color: #1a1e52;
   --placeholder-color: #9da5b4;
-  --highlight-color-focused: #0f3460;
+  --highlight-color-focused: #2d358c;
   margin-bottom: 16px;
 }
 
 .btn-login {
-  --background: #0f3460;
-  --background-activated: #0d1b2a;
-  --background-hover: #1a4a8a;
+  --background: #2d358c;
+  --background-activated: #1a1e52;
+  --background-hover: #3d45b0;
   --border-radius: 10px;
   --color: #ffffff;
   font-weight: 600;
@@ -76,7 +76,7 @@
 }
 
 .btn-crear {
-  --color: #0f3460;
+  --color: #2d358c;
   font-weight: 600;
   font-size: 0.875rem;
   margin: 0;

@@ -1,48 +1,37 @@
 import {
-  IonContent,
-  IonHeader,
-  IonPage,
-  IonTitle,
-  IonToolbar,
-  IonIcon,
-  IonButton,
-  IonItem,
-  IonLabel,
+  IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
+  IonIcon, IonButton, IonItem, IonLabel,
 } from '@ionic/react';
 import {
-  personCircleOutline,
-  mailOutline,
-  callOutline,
-  cardOutline,
-  locationOutline,
-  logOutOutline,
+  mailOutline, callOutline, cardOutline,
+  locationOutline, logOutOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import './Perfil.css';
 
 interface UserData {
-  id: number;
   cedula: string;
   nombreCompleto: string;
   email: string;
   movil: string;
   ciudad: string;
-  edad: number;
 }
+
+const getUserData = (): UserData => {
+  try { return JSON.parse(localStorage.getItem('userData') || '{}'); }
+  catch { return {} as UserData; }
+};
 
 const Perfil: React.FC = () => {
   const history = useHistory();
-
-  const raw = localStorage.getItem('userData');
-  const user: UserData | null = raw ? JSON.parse(raw) : null;
+  const user    = getUserData();
+  const inicial = user?.nombreCompleto?.charAt(0) ?? '?';
 
   const cerrarSesion = () => {
     localStorage.removeItem('userData');
     localStorage.removeItem('sesion');
     history.replace('/home');
   };
-
-  const inicial = user?.nombreCompleto?.charAt(0) ?? '?';
 
   return (
     <IonPage>
@@ -53,6 +42,7 @@ const Perfil: React.FC = () => {
       </IonHeader>
 
       <IonContent className="perfil-content">
+
         <div className="perfil-avatar-section">
           <div className="avatar-circle">
             <span className="avatar-inicial">{inicial}</span>
@@ -104,6 +94,7 @@ const Perfil: React.FC = () => {
             Cerrar Sesión
           </IonButton>
         </div>
+
       </IonContent>
     </IonPage>
   );

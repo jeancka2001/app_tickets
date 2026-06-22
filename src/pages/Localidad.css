@@ -1,6 +1,6 @@
 /* ── Toolbar ──────────────────────────────────────────────── */
 .loc-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --color: #ffffff;
   --border-color: transparent;
 }
@@ -24,7 +24,7 @@
   display: flex; flex-direction: column; align-items: center;
   gap: 8px; padding: 48px 0; color: #9da5b4;
 }
-.loc-loading ion-spinner { color: #0f3460; }
+.loc-loading ion-spinner { color: #2d358c; }
 
 /* ── Resumen chips ────────────────────────────────────────── */
 .res-row { display: flex; gap: 8px; padding: 12px 14px; }
@@ -37,8 +37,8 @@
   font-size: 0.58rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
-.ch-total { background: #e8f0fe; color: #0f3460; }
-.ch-disp  { background: #d4edda; color: #155724; }
+.ch-total { background: #eef0fb; color: #2d358c; }
+.ch-disp  { background: #d4f1dd; color: #155724; }
 .ch-ocp   { background: #fde8e8; color: #7f1d1d; }
 
 /* ── CORRELATIVO ──────────────────────────────────────────── */
@@ -51,14 +51,14 @@
 .qty-row   { display: flex; align-items: center; gap: 24px; margin-bottom: 14px; }
 .qty-btn {
   width: 44px; height: 44px; border-radius: 50%;
-  background: #fff; border: 2px solid #0f3460; color: #0f3460;
+  background: #fff; border: 2px solid #2d358c; color: #2d358c;
   font-size: 1.2rem; cursor: pointer; display: flex;
   align-items: center; justify-content: center; transition: background .15s;
 }
-.qty-btn:active { background: #e8f0fe; }
-.qty-num { font-size: 2.2rem; font-weight: 800; color: #0d1b2a; min-width: 40px; text-align: center; }
+.qty-btn:active { background: #eef0fb; }
+.qty-num { font-size: 2.2rem; font-weight: 800; color: #1a1e52; min-width: 40px; text-align: center; }
 .price-line { font-size: 0.88rem; color: #6b7a90; margin: 0; }
-.price-line strong { color: #0f3460; font-size: 1rem; }
+.price-line strong { color: #2d358c; font-size: 1rem; }
 
 /* ── SECCIÓN MAPA ─────────────────────────────────────────── */
 .map-section { padding: 0 14px; }
@@ -87,11 +87,11 @@
 }
 .z-btn {
   width: 24px; height: 24px; border-radius: 50%;
-  background: #0f3460; border: none; color: #fff;
+  background: #2d358c; border: none; color: #fff;
   font-size: 1rem; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.z-pct { font-size: 0.7rem; font-weight: 700; color: #0f3460; min-width: 30px; text-align: center; }
+.z-pct { font-size: 0.7rem; font-weight: 700; color: #2d358c; min-width: 30px; text-align: center; }
 
 .max-warn {
   font-size: 0.75rem; font-weight: 600; color: #b7510a;
@@ -131,7 +131,7 @@
   display: flex; flex-direction: column; align-items: center;
   min-width: 40px; flex-shrink: 0;
 }
-.fila-tag span  { font-size: 0.7rem; font-weight: 800; color: #0f3460; }
+.fila-tag span  { font-size: 0.7rem; font-weight: 800; color: #2d358c; }
 .fila-tag small { font-size: 0.55rem; color: #27ae60; font-weight: 600; }
 .seats-inline { display: flex; flex-wrap: wrap; gap: 3px; }
 
@@ -141,7 +141,7 @@
 .fila-section { }
 
 .fila-title {
-  font-size: 0.68rem; font-weight: 800; color: #0f3460;
+  font-size: 0.68rem; font-weight: 800; color: #2d358c;
   text-transform: uppercase; letter-spacing: 1px;
   border-bottom: 2px solid #c5cfe0;
   padding-bottom: 4px; margin-bottom: 8px;
@@ -176,8 +176,8 @@
   justify-content: space-between; gap: 4px;
 }
 .mesa-lbl {
-  font-size: 0.68rem; font-weight: 800; color: #0f3460;
-  background: #e8f0fe; border-radius: 4px; padding: 1px 5px;
+  font-size: 0.68rem; font-weight: 800; color: #2d358c;
+  background: #eef0fb; border-radius: 4px; padding: 1px 5px;
   white-space: nowrap;
 }
 .mesa-disp-cnt { font-size: 0.58rem; font-weight: 700; color: #27ae60; }
@@ -225,7 +225,7 @@
 /* ── FOOTER CARRITO ───────────────────────────────────────── */
 .cart-footer {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: #0f3460;
+  background: #2d358c;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   display: flex; align-items: center; justify-content: space-between;
   z-index: 100; box-shadow: 0 -4px 18px rgba(15,52,96,.35);
@@ -236,7 +236,7 @@
 .cart-q { font-size: 0.7rem; color: rgba(255,255,255,.65); }
 .cart-t { font-size: 1.05rem; font-weight: 800; color: #fff; }
 .btn-pay {
-  --background: #27ae60; --background-activated: #1e8449;
+  --background: #f08121; --background-activated: #c96a18;
   --border-radius: 10px; --color: #ffffff;
   --padding-start: 22px; --padding-end: 22px;
   font-weight: 700; height: 40px; margin: 0;

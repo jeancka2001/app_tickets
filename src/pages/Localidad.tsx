@@ -4,7 +4,7 @@ import {
   IonButtons, IonBackButton, IonIcon, IonButton, IonSpinner,
   IonText, IonToast, useIonViewWillLeave,
 } from '@ionic/react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useHistory } from 'react-router-dom';
 import { addOutline, removeOutline, cartOutline } from 'ionicons/icons';
 import axios from 'axios';
 import './Localidad.css';
@@ -25,6 +25,7 @@ interface SillaItem {
   silla?: string;          // "A1-s-3" en mesas
   estado: string;
   idsilla: number;
+  cedula?: string;
   id_registra_compra: string;
   detalle?: null;
 }
@@ -42,6 +43,10 @@ interface NavState {
   tipo: string;
   nombreEvento?: string;
   mapaConcierto?: string;
+  codigoEvento?: string;
+  idPrecio?: number;
+  comisionBoleto?: string;
+  iva?: string;
 }
 
 /* Código de silla para la API de liberación */
@@ -90,8 +95,8 @@ const getUserData = () => {
 const Localidad: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation<NavState>();
+  const history  = useHistory();
   const st = location.state ?? ({} as NavState);
-
   const [localidad, setLocalidad] = useState<LocalidadData | null>(null);
   const [cargando, setCargando]   = useState(true);
   const [sel, setSel]             = useState<SillaItem[]>([]);
@@ -184,22 +189,35 @@ const Localidad: React.FC = () => {
     }
   });
 
-  /* ── Toggle silla mesa ── */
-  const toggleMesa = async (item: SillaItem) => {
+  /* ── Toggle silla (mesa y fila) — mismo payload que el proyecto web ── */
+  const toggleSilla = async (item: SillaItem) => {
     const ud = getUserData();
+    const cedulaPayload = ud.cedula || '';
+
     const { data } = await axios.post(
       `${URL_BASE}/selecionar_localidad_correlativa`,
       {
+        cedula:   cedulaPayload,
+        estado:   'disponible',
         id,
-        cedula: ud.cedula || '',
-        estado: 'reservado',
-        mesa: [{ id_silla: item.idsilla }],
+        cantidad: 1,
+        mas:      'mas',
+        mesa: [
+          {
+            id_silla: item.idsilla,
+            id,
+            cedula:   cedulaPayload,
+            ...item,          // fila, mesa, silla, idsilla, id_registra_compra…
+            estado:   '',     // sobreescribe el estado del item (debe ir vacío al seleccionar)
+          }
+        ],
       },
       { headers: API_HDR }
     );
+
     /*
-     * El backend devuelve: { success, insert: [idsilla...], update: [idsilla...] }
-     * insert = recién reservados, update = recién liberados
+     * success:true  → { insert: [idsilla…] reservados, update: [idsilla…] liberados }
+     * success:false → error del servidor
      */
     if (data.success) {
       const reserved = Array.isArray(data.insert) && (data.insert as number[]).includes(item.idsilla);
@@ -208,31 +226,6 @@ const Localidad: React.FC = () => {
       if (released) setSel(p => p.filter(s => s.idsilla !== item.idsilla));
     } else {
       throw new Error(data.message ?? 'Error al reservar');
-    }
-  };
-
-  /* ── Toggle silla fila ── */
-  const toggleFila = async (item: SillaItem) => {
-    const ud = getUserData();
-    const { data } = await axios.post(
-      `${URL_BASE}/selecionar_localidad_correlativa`,
-      {
-        id,
-        id_silla: item.idsilla,
-        cedula:   ud.cedula || '',
-        silla:    codigoSilla(item),
-        estado:   'reservado',
-      },
-      { headers: API_HDR }
-    );
-    /*
-     * success:true  → recién reservada  ("Localidad seleccionada con exito")
-     * success:false → recién liberada   ("Se quitó la selección con exito")
-     */
-    if (data.success === true) {
-      setSel(p => [...p, item]);
-    } else {
-      setSel(p => p.filter(s => s.idsilla !== item.idsilla));
     }
   };
 
@@ -245,11 +238,7 @@ const Localidad: React.FC = () => {
 
     setProcesando(p => new Set([...p, item.idsilla]));
     try {
-      if (tipo === 'mesa') {
-        await toggleMesa(item);
-      } else {
-        await toggleFila(item);
-      }
+      await toggleSilla(item);
     } catch {
       setToast('No se pudo procesar el asiento. Intenta de nuevo.');
     } finally {
@@ -331,7 +320,7 @@ const Localidad: React.FC = () => {
         {!cargando && localidad && (
           <>
             <div className="res-row">
-              <div className="res-chip ch-total">
+              {/* <div className="res-chip ch-total">
                 <b>{localidad.resumen.total}</b><small>Total</small>
               </div>
               <div className="res-chip ch-disp">
@@ -339,13 +328,14 @@ const Localidad: React.FC = () => {
               </div>
               <div className="res-chip ch-ocp">
                 <b>{localidad.resumen.ocupadas}</b><small>Ocupadas</small>
-              </div>
+              </div> */}
             </div>
+            
 
             {/* ── CORRELATIVO ── */}
             {tipo === 'correlativo' && (
               <div className="corr-view">
-                <p className="corr-desc">Asientos asignados automáticamente. Máx. {MAX_SEL}.</p>
+                <p className="corr-desc">Boletos asignados automáticamente. Máx. {MAX_SEL}.</p>
                 <div className="qty-row">
                   <button className="qty-btn" onClick={() => cambiarCantidad(-1)}>
                     <IonIcon icon={removeOutline} />
@@ -365,6 +355,7 @@ const Localidad: React.FC = () => {
             {(tipo === 'fila' || tipo === 'mesa') && (
               <div className="map-section">
                 <div className="map-topbar">
+                  <p className="corr-desc">Seleccione Boletos. Máx. {MAX_SEL}.</p>
                   <div className="legend">
                     <span className="leg l-disp">Disponible</span>
                     <span className="leg l-ocp">Ocupada</span>
@@ -476,7 +467,21 @@ const Localidad: React.FC = () => {
               <span className="cart-t">${totalCarrito.toFixed(2)}</span>
             </div>
           </div>
-          <IonButton className="btn-pay" onClick={() => { pagandoRef.current = true; }}>
+          <IonButton className="btn-pay" onClick={() => {
+            pagandoRef.current = true;
+            history.push('/pago', {
+              idLocalidad:     id,
+              codigoEvento:    st.codigoEvento   || '',
+              idPrecio:        st.idPrecio        ?? 0,
+              nombreEvento:    st.nombreEvento    || '',
+              localidadNombre: nombre,
+              precio,
+              cantidad:        cantCarrito,
+              idSillas:        tipo === 'correlativo' ? [] : sel.map(s => s.idsilla),
+              comisionBoleto:  parseFloat(st.comisionBoleto || '0'),
+              iva:             st.iva || '1.00',
+            });
+          }}>
             Pagar
           </IonButton>
         </div>

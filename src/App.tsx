@@ -5,6 +5,8 @@ import Home from './pages/Home';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Localidad from './pages/Localidad';
+import Pago from './pages/Pago';
+import { PendientesProvider } from './context/PendientesContext';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -40,21 +42,18 @@ setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route exact path="/home">
-          <Home />
-        </Route>
-        <Route exact path="/register">
-          <Register />
-        </Route>
-        <Route path="/dashboard" render={() => <Dashboard />} />
-        <Route path="/localidad/:id" component={Localidad} />
-        <Route exact path="/">
-          <Redirect to="/home" />
-        </Route>
-      </IonRouterOutlet>
-    </IonReactRouter>
+    <PendientesProvider>
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <Route exact path="/home"><Home /></Route>
+          <Route exact path="/register"><Register /></Route>
+          <Route path="/dashboard" render={() => <Dashboard />} />
+          <Route path="/localidad/:id" component={Localidad} />
+          <Route path="/pago" component={Pago} />
+          <Route exact path="/"><Redirect to="/home" /></Route>
+        </IonRouterOutlet>
+      </IonReactRouter>
+    </PendientesProvider>
   </IonApp>
 );
 

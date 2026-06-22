@@ -1,11 +1,53 @@
 .eventos-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --color: #ffffff;
   --border-color: transparent;
 }
 
+/* ── Banner compra pendiente ───────────────────────────────── */
+.banner-pendiente {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff3cd;
+  border-left: 4px solid #f08121;
+  margin: 12px 16px 0;
+  padding: 12px 12px 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(240, 129, 33, 0.15);
+}
+.banner-pend-icon {
+  font-size: 1.6rem;
+  color: #f08121;
+  flex-shrink: 0;
+}
+.banner-pend-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.banner-pend-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7a4a00;
+  line-height: 1.2;
+}
+.banner-pend-sub {
+  font-size: 0.75rem;
+  color: #a06010;
+  line-height: 1.3;
+}
+.banner-pend-arrow {
+  font-size: 1.1rem;
+  color: #f08121;
+  flex-shrink: 0;
+}
+
 .search-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --border-color: transparent;
   padding-bottom: 8px;
 }
@@ -36,7 +78,7 @@
 }
 
 .loading-spinner {
-  color: #0f3460;
+  color: #2d358c;
   margin-bottom: 12px;
 }
 
@@ -76,7 +118,7 @@
 .evento-nombre {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #0d1b2a;
+  color: #1a1e52;
   margin: 0 0 10px;
   line-height: 1.3;
 }
@@ -92,7 +134,7 @@
 
 .evento-detalle ion-icon {
   font-size: 0.95rem;
-  color: #0f3460;
+  color: #2d358c;
   flex-shrink: 0;
 }
 
@@ -116,12 +158,12 @@
 
 .evento-precio ion-icon {
   font-size: 1rem;
-  color: #0f3460;
+  color: #2d358c;
 }
 
 .btn-comprar {
-  --background: #0f3460;
-  --background-activated: #0d1b2a;
+  --background: #2d358c;
+  --background-activated: #1a1e52;
   --border-radius: 8px;
   --color: #ffffff;
   --padding-start: 16px;
@@ -134,7 +176,7 @@
 
 /* Modal */
 .modal-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --color: #ffffff;
   --border-color: transparent;
 }
@@ -153,7 +195,7 @@
   width: 100%;
   height: 180px;
   overflow: hidden;
-  background: #0d1b2a;
+  background: #1a1e52;
 }
 
 .modal-evento-img {
@@ -229,7 +271,7 @@
 .precio-localidad {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0d1b2a;
+  color: #1a1e52;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,8 +286,8 @@
 }
 
 .badge-correlativo {
-  --background: #e8f0fe;
-  --color: #0f3460;
+  --background: #eef0fb;
+  --color: #2d358c;
 }
 
 .badge-mesa {
@@ -256,7 +298,7 @@
 .precio-valor {
   font-size: 1.15rem;
   font-weight: 800;
-  color: #0f3460;
+  color: #2d358c;
   flex-shrink: 0;
   margin-left: 12px;
 }
@@ -272,7 +314,7 @@
 
 .precio-disponibles ion-icon {
   font-size: 0.9rem;
-  color: #27ae60;
+  color: #f08121;
 }
 
 .precio-promo {
@@ -288,8 +330,8 @@
 }
 
 .btn-seleccionar {
-  --background: #0f3460;
-  --background-activated: #0d1b2a;
+  --background: #2d358c;
+  --background-activated: #1a1e52;
   --border-radius: 10px;
   --color: #ffffff;
   font-weight: 600;

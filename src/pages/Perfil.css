@@ -1,18 +1,16 @@
 .perfil-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --color: #ffffff;
   --border-color: transparent;
 }
 
-.perfil-content {
-  --background: #f4f6fb;
-}
+.perfil-content { --background: #f4f6fb; }
 
 .perfil-avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(160deg, #0f3460 0%, #1a4a8a 100%);
+  background: linear-gradient(160deg, #2d358c 0%, #3d45b0 100%);
   padding: 32px 24px 36px;
 }
 
@@ -51,7 +49,7 @@
 
 .perfil-section-title {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #9da5b4;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -74,13 +72,11 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.perfil-item:last-child {
-  border-bottom: none;
-}
+.perfil-item:last-child { border-bottom: none; }
 
 .item-icon {
   font-size: 1.3rem;
-  color: #0f3460;
+  color: #2d358c;
   margin-right: 4px;
 }
 
@@ -92,19 +88,12 @@
 
 .item-value {
   font-size: 0.9rem;
-  color: #0d1b2a;
+  color: #1a1e52;
   font-weight: 500;
   margin: 0;
 }
 
-.chevron {
-  font-size: 1rem;
-  color: #c0cbe0;
-}
-
-.perfil-logout {
-  padding: 28px 16px 16px;
-}
+.perfil-logout { padding: 28px 16px 32px; }
 
 .btn-logout {
   --background: #fff;

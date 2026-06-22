@@ -13,6 +13,7 @@ import {
   IonText,
   IonModal,
   IonBadge,
+  IonAlert,
 } from '@ionic/react';
 import {
   locationOutline,
@@ -21,9 +22,11 @@ import {
   closeOutline,
   peopleOutline,
   chevronForwardOutline,
+  alertCircleOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
+import { usePendientes } from '../context/PendientesContext';
 import './Eventos.css';
 
 interface Localidad {
@@ -34,6 +37,7 @@ interface Localidad {
   cantidad_disponible: number;
   tipo_localidad: string;
   mensaje_promocion: string;
+  comision_boleto?: string;
 }
 
 interface Evento {
@@ -46,6 +50,7 @@ interface Evento {
   imagenConcierto: string;
   mapaConcierto: string;
   codigoEvento: string;
+  iva?: string;
   localidades?: Localidad[];
 }
 
@@ -58,6 +63,8 @@ const formatFecha = (fecha: string) => {
 
 const Eventos: React.FC = () => {
   const history = useHistory();
+  const { pendientesCount } = usePendientes();
+
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -67,6 +74,8 @@ const Eventos: React.FC = () => {
   const [precios, setPrecios] = useState<Localidad[]>([]);
   const [cargandoPrecios, setCargandoPrecios] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
+
+  const [alertPendiente, setAlertPendiente] = useState(false);
 
   useEffect(() => {
     const cargarEventos = async () => {
@@ -123,13 +132,22 @@ const Eventos: React.FC = () => {
   };
 
   const seleccionarLocalidad = (precio: Localidad) => {
+    if (pendientesCount > 0) {
+      cerrarModal();
+      setAlertPendiente(true);
+      return;
+    }
     cerrarModal();
     history.push(`/localidad/${precio.id_localidad}`, {
-      nombre: precio.localidad,
-      precio: precio.precio_normal,
-      tipo: precio.tipo_localidad,
-      nombreEvento: eventoSeleccionado?.nombreConcierto,
-      mapaConcierto: eventoSeleccionado?.mapaConcierto,
+      nombre:          precio.localidad,
+      precio:          precio.precio_normal,
+      tipo:            precio.tipo_localidad,
+      nombreEvento:    eventoSeleccionado?.nombreConcierto,
+      mapaConcierto:   eventoSeleccionado?.mapaConcierto,
+      codigoEvento:    eventoSeleccionado?.codigoEvento || '',
+      idPrecio:        precio.id,
+      comisionBoleto:  precio.comision_boleto || '0',
+      iva:             eventoSeleccionado?.iva || '1.00',
     });
   };
 
@@ -155,6 +173,19 @@ const Eventos: React.FC = () => {
       </IonHeader>
 
       <IonContent className="eventos-content">
+
+        {/* Banner de compra pendiente */}
+        {pendientesCount > 0 && (
+          <div className="banner-pendiente" onClick={() => history.push('/dashboard/compras')}>
+            <IonIcon icon={alertCircleOutline} className="banner-pend-icon" />
+            <div className="banner-pend-text">
+              <span className="banner-pend-title">Tienes {pendientesCount} compra{pendientesCount > 1 ? 's' : ''} pendiente{pendientesCount > 1 ? 's' : ''}</span>
+              <span className="banner-pend-sub">Completa o anula tu pago antes de comprar</span>
+            </div>
+            <IonIcon icon={chevronForwardOutline} className="banner-pend-arrow" />
+          </div>
+        )}
+
         {cargando && (
           <div className="loading-state">
             <IonSpinner name="crescent" className="loading-spinner" />
@@ -298,6 +329,26 @@ const Eventos: React.FC = () => {
         </IonModal>
 
       </IonContent>
+
+      {/* Alert: bloqueo por compra pendiente */}
+      <IonAlert
+        isOpen={alertPendiente}
+        header="Compra pendiente"
+        message={`Tienes ${pendientesCount} compra${pendientesCount > 1 ? 's' : ''} pendiente${pendientesCount > 1 ? 's' : ''} de pago. Completa o anula tu compra anterior antes de realizar una nueva.`}
+        buttons={[
+          {
+            text: 'Cerrar',
+            role: 'cancel',
+          },
+          {
+            text: 'Ver mis compras',
+            role: 'confirm',
+            handler: () => history.push('/dashboard/compras'),
+          },
+        ]}
+        onDidDismiss={() => setAlertPendiente(false)}
+      />
+
     </IonPage>
   );
 };

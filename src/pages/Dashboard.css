@@ -1,7 +1,7 @@
 .main-tab-bar {
   --background: #ffffff;
   --color: #9da5b4;
-  --color-selected: #0f3460;
+  --color-selected: #2d358c;
   border-top: 1px solid #e8eaf0;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
   height: 60px;
@@ -15,4 +15,16 @@
 
 .main-tab-bar ion-icon {
   font-size: 1.5rem;
+}
+
+.tab-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 20px);
+  font-size: 0.6rem;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  line-height: 16px;
 }

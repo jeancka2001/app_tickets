@@ -1,59 +1,106 @@
-.register-header {
-  --background: #0f3460;
-}
-
 .register-toolbar {
-  --background: #0f3460;
+  --background: #2d358c;
   --color: #ffffff;
   --border-color: transparent;
 }
+.register-toolbar ion-back-button { --color: #ffffff; }
 
-.register-toolbar ion-back-button {
-  --color: #ffffff;
-}
-
-.register-toolbar ion-title {
-  color: #ffffff;
-}
-
-.register-content {
-  --background: #f4f6fb;
-}
+.register-content { --background: #f4f6fb; }
 
 .register-container {
-  padding: 32px 24px;
+  padding: 28px 24px 40px;
   max-width: 480px;
   margin: 0 auto;
 }
 
 .register-title {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  color: #0d1b2a;
-  margin: 0 0 8px;
+  color: #1a1e52;
+  margin: 0 0 6px;
 }
 
 .register-subtitle {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #6b7a90;
-  margin: 0 0 28px;
+  margin: 0 0 24px;
+  line-height: 1.5;
 }
 
 .register-input {
   --border-radius: 10px;
-  --color: #0d1b2a;
-  --highlight-color-focused: #0f3460;
-  margin-bottom: 16px;
+  --color: #1a1e52;
+  --highlight-color-focused: #2d358c;
+  margin-bottom: 14px;
+}
+
+.register-hint {
+  font-size: 0.75rem;
+  color: #9da5b4;
+  margin: -8px 0 16px 4px;
+  line-height: 1.4;
+}
+
+.register-error {
+  font-size: 0.82rem;
+  color: #e74c3c;
+  background: #fde8e8;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  text-align: center;
 }
 
 .btn-register {
-  --background: #0f3460;
-  --background-activated: #0d1b2a;
-  --background-hover: #1a4a8a;
+  --background: #2d358c;
+  --background-activated: #1a1e52;
+  --background-hover: #3d45b0;
   --border-radius: 10px;
   --color: #ffffff;
   font-weight: 600;
   font-size: 1rem;
   height: 50px;
-  margin-top: 24px;
+  margin-top: 20px;
+}
+
+.btn-spinner { margin-right: 8px; --color: #fff; }
+
+.register-login-link {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6b7a90;
+  margin-top: 20px;
+  cursor: pointer;
+}
+.register-login-link span {
+  color: #2d358c;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Pantalla de éxito */
+.register-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+.success-icon {
+  font-size: 72px;
+  color: #27ae60;
+  margin-bottom: 16px;
+}
+.register-success h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a1e52;
+  margin: 0 0 12px;
+}
+.register-success p {
+  font-size: 0.9rem;
+  color: #6b7a90;
+  line-height: 1.5;
+  margin: 0;
 }
