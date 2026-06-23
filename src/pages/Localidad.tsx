@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButtons, IonBackButton, IonIcon, IonButton, IonSpinner,
-  IonText, IonToast, useIonViewWillLeave,
+  IonText, IonToast, useIonViewWillLeave, useIonViewWillEnter,
 } from '@ionic/react';
 import { useParams, useLocation, useHistory } from 'react-router-dom';
 import { addOutline, removeOutline, cartOutline } from 'ionicons/icons';
@@ -48,14 +48,6 @@ interface NavState {
   comisionBoleto?: string;
   iva?: string;
 }
-
-/* Código de silla para la API de liberación */
-const codigoSilla = (item: SillaItem): string => {
-  if (item.silla) return item.silla;
-  if (item.mesa)  return item.mesa;
-  if (item.fila)  return item.fila + (item.numero ?? '');
-  return String(item.idsilla);
-};
 
 /* Número visible en el botón */
 const sillaNum = (item: SillaItem, idx: number) =>
@@ -129,54 +121,49 @@ const Localidad: React.FC = () => {
       .finally(() => setCargando(false));
   }, [id]);
 
+  /* Cuando el usuario vuelve desde Pago sin completar, resetear el flag */
+  useIonViewWillEnter(() => {
+    pagandoRef.current = false;
+  });
+
   /* ── Liberar asientos al salir (a menos que el usuario vaya a pagar) ── */
   useIonViewWillLeave(() => {
     if (pagandoRef.current) return;
 
-    const ud  = getUserData();
-    const cur = selRef.current;
+    const ud             = getUserData();
+    const cur            = selRef.current;
+    const cedulaPayload  = ud.cedula || '';
 
-    /* Liberar sillas numeradas (mesa/fila) */
-    if (cur.length > 0) {
-      /* Mesas: enviar array en un solo llamado */
-      const mesaItems = cur.filter(i => i.mesa);
-      if (mesaItems.length > 0) {
-        axios.post(
-          `${URL_BASE}/selecionar_localidad_correlativa`,
-          {
-            id,
-            cedula: ud.cedula || '',
-            estado: 'reservado',
-            mesa: mesaItems.map(i => ({ id_silla: i.idsilla })),
-          },
-          { headers: API_HDR }
-        ).catch(() => {});
-      }
-
-      /* Filas: un llamado por silla (toggle → libera porque ya está reservada) */
-      const filaItems = cur.filter(i => !i.mesa);
-      filaItems.forEach(item => {
-        axios.post(
-          `${URL_BASE}/selecionar_localidad_correlativa`,
-          {
-            id,
+    /* Liberar cada silla seleccionada con el mismo payload que toggleSilla
+       (mismo endpoint → la API invierte el estado: reservado → disponible) */
+    cur.forEach(item => {
+      axios.post(
+        `${URL_BASE}/selecionar_localidad_correlativa`,
+        {
+          cedula:   cedulaPayload,
+          estado:   'disponible',
+          id,
+          cantidad: 1,
+          mas:      'mas',
+          mesa: [{
             id_silla: item.idsilla,
-            cedula:   ud.cedula || '',
-            silla:    codigoSilla(item),
-            estado:   'reservado',
-          },
-          { headers: API_HDR }
-        ).catch(() => {});
-      });
-    }
+            id,
+            cedula:   cedulaPayload,
+            ...item,
+            estado:   '',
+          }],
+        },
+        { headers: API_HDR }
+      ).catch(() => {});
+    });
 
     /* Liberar correlativo */
-    if (tipo === 'correlativo' && corrActivoRef.current) {
+    if (corrActivoRef.current) {
       axios.post(
         `${URL_BASE}/selecionar_localidad_correlativa`,
         {
           id,
-          cedula:      ud.cedula || '',
+          cedula:      cedulaPayload,
           estado:      'reservado',
           cantidad:    0,
           mas:         'eliminar',

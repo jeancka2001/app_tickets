@@ -6,8 +6,9 @@ import {
   IonAlert, IonToast, useIonViewWillEnter,
 } from '@ionic/react';
 import {
-  openOutline, closeOutline, alertCircleOutline,
-  checkmarkCircleOutline, closeCircleOutline, refreshOutline,
+  closeOutline, alertCircleOutline, openOutline,
+  checkmarkCircleOutline, closeCircleOutline,
+  refreshOutline, calendarNumberOutline, pricetagOutline,
 } from 'ionicons/icons';
 import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
@@ -19,19 +20,33 @@ const API_HDR = {
 };
 const URL_BASE = 'https://api.t-ickets.com/ms_login/api/v1';
 
+interface InfoConcierto {
+  nombreConcierto: string;
+  localidad_nombre: string;
+  CODIGEVENTO: string;
+  cantidad: string;
+  localidad_precio: number;
+}
+
 interface Registro {
-  id?: number;
-  id_registraCompra?: number;
-  concierto?: string;
-  localidad?: string;
-  localidad_nombre?: string;
-  total?: string;
-  fecha?: string;
-  fechaCreacion?: string;
-  estado_pago?: string;
-  forma_pago?: string;
-  link_pago?: string;
-  cedula?: string;
+  id: number;
+  cedula: string;
+  forma_pago: string;
+  total_pago: string;
+  info_concierto: InfoConcierto[];
+  estado_pago: string;   // "Pagado" | "Pendiente" | "Comprobar" | "Anulado" | "Expirado"
+  fechaCreacion: string;
+  fechaReporte: string;
+  link_pago: string | null;
+  link_comprobante: string | null;
+  numerTransacion: string | null;
+  banco: string | null;
+  generar_pdf: string;
+  subtotal: string;
+  iva: string;
+  comision_bancaria: string;
+  comision_boleto: string;
+  canal: string;
 }
 
 const estadoColor: Record<string, string> = {
@@ -43,6 +58,17 @@ const estadoColor: Record<string, string> = {
 };
 
 const BANCOS = ['Banco Pichincha', 'Banco Guayaquil', 'Produbanco', 'Banco del Austro', 'Banco Internacional'];
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const formatFecha = (fecha: string) => {
+  if (!fecha || fecha === 'undefined') return '—';
+  const solo = fecha.split(' ')[0].split('T')[0];
+  const parts = solo.split('-');
+  if (parts.length < 3) return '—';
+  const [y, m, d] = parts;
+  const mes = MESES[parseInt(m) - 1];
+  return mes ? `${d} ${mes} ${y}` : '—';
+};
 
 const getUserData = () => {
   try { return JSON.parse(localStorage.getItem('userData') || '{}'); }
@@ -119,12 +145,11 @@ const Compras: React.FC = () => {
   const confirmarAnular = async () => {
     const reg = anularTarget.current;
     if (!reg) return;
-    const regId = reg.id ?? reg.id_registraCompra;
     setAnulando(true);
     try {
       const { data } = await axios.post(
         `${URL_BASE}/anularCompraPendiente`,
-        { id: regId, cedula: user.cedula, id_usuario: user.id ?? user.id_usuario ?? 0, id_operador: 0 },
+        { id: reg.id, cedula: user.cedula, id_usuario: user.id ?? user.id_usuario ?? 0, id_operador: 0 },
         { headers: API_HDR }
       );
       if (data.success) {
@@ -145,12 +170,19 @@ const Compras: React.FC = () => {
     if (!reg || !banco || !codigo.trim()) {
       showToast('Completa todos los campos.', 'danger'); return;
     }
-    const regId = reg.id ?? reg.id_registraCompra;
     setReportando(true);
     try {
       const { data } = await axios.post(
         `${URL_BASE}/registraPagos`,
-        { id: regId, cedula: user.cedula, forma_pago: 'Deposito', banco, codigo: codigo.trim(), id_usuario: 0, id_operador: 0 },
+        {
+          id:          reg.id,
+          cedula:      user.cedula,
+          forma_pago:  'Deposito',
+          banco,
+          codigo:      codigo.trim(),
+          id_usuario:  user.id ?? user.id_usuario ?? 0,
+          id_operador: 0,
+        },
         { headers: API_HDR }
       );
       if (data.success) {
@@ -167,16 +199,78 @@ const Compras: React.FC = () => {
     } finally { setReportando(false); }
   };
 
-  const regId   = (r: Registro) => r.id ?? r.id_registraCompra;
-  const regNom  = (r: Registro) => r.concierto ?? '—';
-  const regLoc  = (r: Registro) => r.localidad ?? r.localidad_nombre ?? '';
-  const regFec  = (r: Registro) => r.fecha ?? r.fechaCreacion ?? '';
+  const nombreConcierto = (reg: Registro) =>
+    reg.info_concierto?.[0]?.nombreConcierto ?? '—';
+  const localidadNombre = (reg: Registro) =>
+    reg.info_concierto?.[0]?.localidad_nombre ?? '';
+  const cantidadBoletos = (reg: Registro) =>
+    reg.info_concierto?.[0]?.cantidad ?? '1';
+
+  const CardReg = ({ reg, acciones }: { reg: Registro; acciones: boolean }) => (
+    <div className={`comp-card ${acciones ? 'comp-card-pendiente' : ''}`}>
+      <div className="comp-card-head">
+        <div className="comp-info">
+          <span className="comp-nombre">{nombreConcierto(reg)}</span>
+          {localidadNombre(reg) && (
+            <span className="comp-local">{localidadNombre(reg)}</span>
+          )}
+          <div className="comp-meta-row">
+            {reg.forma_pago && (
+              <span className="comp-metodo">{reg.forma_pago}</span>
+            )}
+            <span className="comp-fecha">
+              <IonIcon icon={pricetagOutline} /> {cantidadBoletos(reg)} boleto{Number(cantidadBoletos(reg)) > 1 ? 's' : ''}
+            </span>
+          </div>
+          {reg.fechaCreacion && (
+            <span className="comp-fecha">
+              <IonIcon icon={calendarNumberOutline} /> {formatFecha(reg.fechaCreacion)}
+            </span>
+          )}
+        </div>
+        <div className="comp-right">
+          <span className="comp-total">${parseFloat(reg.total_pago || '0').toFixed(2)}</span>
+          <IonBadge className={`badge-reg ${estadoColor[reg.estado_pago] ?? 'badge-reg-anulado'}`}>
+            {reg.estado_pago}
+          </IonBadge>
+        </div>
+      </div>
+
+      {acciones && (
+        <div className="comp-acciones">
+          {reg.link_pago ? (
+            <IonButton size="small" className="btn-comp-pagar"
+              onClick={() => window.open(reg.link_pago!, '_blank')}>
+              <IonIcon icon={openOutline} slot="start" />
+              Ir al pago
+            </IonButton>
+          ) : (
+            <IonButton size="small" className="btn-comp-reportar"
+              onClick={() => { reporteTarget.current = reg; setBanco(''); setCodigo(''); setModalReporte(true); }}>
+              Reportar depósito
+            </IonButton>
+          )}
+          <IonButton size="small" fill="outline" className="btn-comp-anular"
+            disabled={anulando}
+            onClick={() => { anularTarget.current = reg; setAlertAnular(true); }}>
+            <IonIcon icon={closeCircleOutline} slot="start" />
+            Anular
+          </IonButton>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar className="compras-toolbar">
           <IonTitle>Mis Compras</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={cargarPendientes} disabled={cargandoPend} className="btn-recargar">
+              <IonIcon icon={refreshOutline} slot="icon-only" />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -188,9 +282,6 @@ const Compras: React.FC = () => {
           {pendientes.length > 0 && (
             <IonBadge color="danger" className="comp-badge">{pendientes.length}</IonBadge>
           )}
-          <button className="comp-refresh" onClick={cargarPendientes} disabled={cargandoPend}>
-            <IonIcon icon={refreshOutline} />
-          </button>
         </div>
 
         {cargandoPend && (
@@ -205,40 +296,7 @@ const Compras: React.FC = () => {
         )}
 
         {!cargandoPend && pendientes.map(reg => (
-          <div key={regId(reg)} className="comp-card comp-card-pendiente">
-            <div className="comp-card-head">
-              <div className="comp-info">
-                <span className="comp-nombre">{regNom(reg)}</span>
-                {regLoc(reg) && <span className="comp-local">{regLoc(reg)}</span>}
-                {reg.forma_pago && <span className="comp-metodo">{reg.forma_pago}</span>}
-                {regFec(reg) && <span className="comp-fecha">{regFec(reg)}</span>}
-              </div>
-              <div className="comp-right">
-                <span className="comp-total">${parseFloat(reg.total || '0').toFixed(2)}</span>
-                <IonBadge className="badge-reg badge-reg-pendiente">Pendiente</IonBadge>
-              </div>
-            </div>
-            <div className="comp-acciones">
-              {reg.link_pago ? (
-                <IonButton size="small" className="btn-comp-pagar"
-                  onClick={() => window.open(reg.link_pago!, '_blank')}>
-                  <IonIcon icon={openOutline} slot="start" />
-                  Ir al pago
-                </IonButton>
-              ) : (
-                <IonButton size="small" className="btn-comp-reportar"
-                  onClick={() => { reporteTarget.current = reg; setBanco(''); setCodigo(''); setModalReporte(true); }}>
-                  Reportar depósito
-                </IonButton>
-              )}
-              <IonButton size="small" fill="outline" className="btn-comp-anular"
-                disabled={anulando}
-                onClick={() => { anularTarget.current = reg; setAlertAnular(true); }}>
-                <IonIcon icon={closeCircleOutline} slot="start" />
-                Anular
-              </IonButton>
-            </div>
-          </div>
+          <CardReg key={reg.id} reg={reg} acciones={true} />
         ))}
 
         {/* ── HISTORIAL ── */}
@@ -259,46 +317,12 @@ const Compras: React.FC = () => {
               <div className="comp-empty"><p>Sin registros de compras.</p></div>
             )}
             {!cargandoHist && historial.map(reg => (
-              <div key={regId(reg)} className="comp-card">
-                <div className="comp-card-head">
-                  <div className="comp-info">
-                    <span className="comp-nombre">{regNom(reg)}</span>
-                    {regLoc(reg) && <span className="comp-local">{regLoc(reg)}</span>}
-                    {reg.forma_pago && <span className="comp-metodo">{reg.forma_pago}</span>}
-                    {regFec(reg) && <span className="comp-fecha">{regFec(reg)}</span>}
-                  </div>
-                  <div className="comp-right">
-                    <span className="comp-total">${parseFloat(reg.total || '0').toFixed(2)}</span>
-                    <IonBadge className={`badge-reg ${estadoColor[reg.estado_pago ?? ''] ?? 'badge-reg-anulado'}`}>
-                      {reg.estado_pago ?? '—'}
-                    </IonBadge>
-                  </div>
-                </div>
-                {reg.link_pago && reg.estado_pago === 'Pendiente' && (
-                  <div className="comp-acciones">
-                    <IonButton size="small" className="btn-comp-pagar"
-                      onClick={() => window.open(reg.link_pago!, '_blank')}>
-                      <IonIcon icon={openOutline} slot="start" />
-                      Ir al pago
-                    </IonButton>
-                  </div>
-                )}
-              </div>
+              <CardReg key={reg.id} reg={reg} acciones={false} />
             ))}
-            {!cargandoHist && historial.length > 0 && (
-              <div className="hist-refresh-row">
-                <IonButton fill="clear" size="small" onClick={cargarHistorial}>
-                  <IonIcon icon={refreshOutline} slot="start" />
-                  Actualizar
-                </IonButton>
-              </div>
-            )}
           </>
         )}
 
-        {/* Espacio inferior */}
         <div style={{ height: 20 }} />
-
       </IonContent>
 
       {/* ── Modal Reportar Depósito ── */}

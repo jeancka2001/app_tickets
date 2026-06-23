@@ -32,14 +32,29 @@ import axios from 'axios';
 import './Boletos.css';
 
 interface Asiento {
+  id: number;
+  id_localidades: number;
+  id_espacio: number;
   espacio: string;
-  current: number;
+  typo: string;           // "correlativo" | "mesa" | "fila"
+  cantidad: number | null;
+  current: number | null;
+  fila: string | null;
+  sillas: string | null;
+  silla: string | null;
+  estado: string;
+  cedula: string;
+  fecha: string;
+  mesa: string | null;
+  pasado: string;         // "PASADO" si el evento ya pasó
+  id_registraCompra: string;
   id_registra_compra: string;
-  pasado: string;
 }
 
 interface Ticket {
   id: number;
+  id_localidades_items: number;
+  id_registraCompra: number;
   codigoEvento: string;
   cedula: string;
   concierto: string;
@@ -48,17 +63,38 @@ interface Ticket {
   fechaCreacion: string;
   fecha: string;
   estado: string;
+  link: string;
   localidad: string;
   pdf: string;
+  cedido: string;
+  usuario_cedido: string;
   canje: string;
   comisionBoleto: string;
   asientos: Asiento;
 }
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
 const formatFecha = (fecha: string) => {
-  const [y, m, d] = fecha.split('-');
-  return `${d} ${MESES[parseInt(m) - 1]} ${y}`;
+  if (!fecha || fecha === 'undefined') return '—';
+  const solo = fecha.split(' ')[0].split('T')[0]; // quita hora si viene datetime
+  const parts = solo.split('-');
+  if (parts.length < 3) return '—';
+  const [y, m, d] = parts;
+  const mes = MESES[parseInt(m) - 1];
+  return mes ? `${d} ${mes} ${y}` : '—';
+};
+
+const formatSilla = (asiento: Asiento): string => {
+  const t = asiento.typo;
+  if (t === 'mesa' && asiento.mesa) {
+    return `Mesa ${asiento.mesa}${asiento.silla ? ` · Silla ${asiento.silla.split('-s-')[1] ?? asiento.silla}` : ''}`;
+  }
+  if (t === 'fila' && asiento.fila) {
+    return `Fila ${asiento.fila}${asiento.current !== null ? ` · #${asiento.current}` : ''}`;
+  }
+  if (asiento.current !== null && asiento.current !== undefined) return `#${asiento.current}`;
+  return '—';
 };
 
 const getCedulaGuardada = (): string => {
@@ -285,7 +321,7 @@ const Boletos: React.FC = () => {
                     alt="QR de entrada"
                     className="qr-img"
                   />
-                  <span className="qr-codigo">{ticketSeleccionado.pdf}</span>
+                  {/* <span className="qr-codigo">{ticketSeleccionado.pdf}</span> */}
                 </div>
 
                 <div className="entrada-info-card">
@@ -319,7 +355,7 @@ const Boletos: React.FC = () => {
                     <IonIcon icon={personOutline} className="ei-icon" />
                     <div>
                       <span className="ei-label">Silla / Puesto</span>
-                      <span className="ei-valor">#{ticketSeleccionado.sillas}</span>
+                      <span className="ei-valor">{formatSilla(ticketSeleccionado.asientos)}</span>
                     </div>
                   </div>
 
@@ -349,11 +385,11 @@ const Boletos: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="entrada-canje">
+                  {/* <div className="entrada-canje">
                     <span className={`canje-badge ${ticketSeleccionado.canje === 'NO CANJEADO' ? 'canje-no' : 'canje-si'}`}>
                       {ticketSeleccionado.canje}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
 
                 <IonButton

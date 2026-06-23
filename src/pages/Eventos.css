@@ -344,3 +344,56 @@
   --background: #e0e0e0;
   --color: #9da5b4;
 }
+
+/* ── Sección Próximos Eventos ──────────────────────────────── */
+.seccion-proximos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #6b7a90;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 4px 2px;
+  margin-top: 4px;
+}
+
+.seccion-proximos-icon {
+  font-size: 1.1rem;
+  color: #9da5b4;
+}
+
+.evento-card-proximo {
+  opacity: 0.85;
+  border: 1.5px dashed #c0cbe0;
+  box-shadow: none;
+}
+
+.evento-img-proximo {
+  filter: grayscale(30%);
+}
+
+.proximo-overlay-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 30, 80, 0.75);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.proximo-overlay-badge ion-icon {
+  font-size: 0.85rem;
+}
+
+.evento-banner {
+  position: relative;
+}

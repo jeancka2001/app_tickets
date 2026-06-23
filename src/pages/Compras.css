@@ -121,8 +121,22 @@
 }
 
 .comp-fecha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.7rem;
   color: #b0b8c8;
+}
+.comp-fecha ion-icon { font-size: 0.78rem; }
+
+.comp-meta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-recargar {
+  --color: rgba(255,255,255,0.8);
 }
 
 .comp-right {

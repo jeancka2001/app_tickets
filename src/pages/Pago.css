@@ -478,3 +478,20 @@
 
 .dep-ocr-monto-ok  { color: #155724; }
 .dep-ocr-monto-err { color: #856404; }
+
+/* ── Botones alternativos (revisión + WhatsApp) ────────────── */
+.dep-botones-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-whatsapp {
+  --border-radius: 12px;
+  --color: #25d366;
+  --border-color: #25d366;
+  font-weight: 700;
+  font-size: 1rem;
+  height: 52px;
+  margin: 0;
+}

@@ -23,6 +23,7 @@ import {
   peopleOutline,
   chevronForwardOutline,
   alertCircleOutline,
+  timeOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
@@ -66,6 +67,7 @@ const Eventos: React.FC = () => {
   const { pendientesCount } = usePendientes();
 
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [eventosProximos, setEventosProximos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -80,19 +82,14 @@ const Eventos: React.FC = () => {
   useEffect(() => {
     const cargarEventos = async () => {
       try {
-        const { data } = await axios.get(
-          'https://api.t-ickets.com/ms_login/listareventos/ACTIVO/',
-          {
-            headers: {
-              'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
-            },
-          }
-        );
-        if (data.success) {
-          setEventos(data.data);
-        } else {
-          setError('No se pudieron cargar los eventos');
-        }
+        const hdrs = { headers: { 'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' } };
+        const [resActivo, resProximo] = await Promise.all([
+          axios.get('https://api.t-ickets.com/ms_login/listareventos/ACTIVO/', hdrs),
+          axios.get('https://api.t-ickets.com/ms_login/listareventos/PROXIMO/', hdrs),
+        ]);
+        if (resActivo.data.success) setEventos(resActivo.data.data);
+        else setError('No se pudieron cargar los eventos');
+        if (resProximo.data.success) setEventosProximos(resProximo.data.data ?? []);
       } catch {
         setError('Error al conectar con el servidor');
       } finally {
@@ -151,6 +148,19 @@ const Eventos: React.FC = () => {
     });
   };
 
+  /* Abre automáticamente el evento si viene de un deep link */
+  useEffect(() => {
+    if (cargando || eventos.length === 0) return;
+    const code = sessionStorage.getItem('pendingEventCode');
+    if (!code) return;
+    const ev = eventos.find(e => e.codigoEvento === code);
+    if (ev) {
+      sessionStorage.removeItem('pendingEventCode');
+      abrirPrecios(ev);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargando, eventos]);
+
   const eventosFiltrados = eventos.filter((ev) =>
     ev.nombreConcierto.toLowerCase().includes(busqueda.toLowerCase()) ||
     ev.cuidadConcert.toLowerCase().includes(busqueda.toLowerCase())
@@ -201,7 +211,7 @@ const Eventos: React.FC = () => {
 
         {!cargando && !error && (
           <div className="eventos-list">
-            {eventosFiltrados.length === 0 && (
+            {eventosFiltrados.length === 0 && eventosProximos.length === 0 && (
               <div className="empty-search">
                 <IonText color="medium"><p>No se encontraron eventos</p></IonText>
               </div>
@@ -238,6 +248,42 @@ const Eventos: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {eventosProximos.length > 0 && (
+              <>
+                <div className="seccion-proximos">
+                  <IonIcon icon={timeOutline} className="seccion-proximos-icon" />
+                  <span>Próximos Eventos</span>
+                </div>
+
+                {eventosProximos.map((ev) => (
+                  <div key={ev.id} className="evento-card evento-card-proximo">
+                    <div className="evento-banner">
+                      <img
+                        src={ev.imagenConcierto}
+                        alt={ev.nombreConcierto}
+                        className="evento-img evento-img-proximo"
+                      />
+                      <div className="proximo-overlay-badge">
+                        <IonIcon icon={timeOutline} />
+                        Próximamente
+                      </div>
+                    </div>
+                    <div className="evento-body">
+                      <h2 className="evento-nombre">{ev.nombreConcierto}</h2>
+                      <div className="evento-detalle">
+                        <IonIcon icon={calendarNumberOutline} />
+                        <span>{formatFecha(ev.fechaConcierto)} · {ev.horaConcierto}</span>
+                      </div>
+                      <div className="evento-detalle">
+                        <IonIcon icon={locationOutline} />
+                        <span>{ev.lugarConcierto}, {ev.cuidadConcert}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 

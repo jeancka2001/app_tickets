@@ -3,6 +3,7 @@ import {
   IonContent,
   IonPage,
   IonInput,
+  IonInputPasswordToggle,
   IonButton,
   IonText,
   IonToast,
@@ -85,7 +86,9 @@ console.log('Datos de sesión guardados:', sesion);
               autocomplete="current-password"
               value={contrasena}
               onIonChange={(e) => setContrasena(e.detail.value!)}
-            />
+            >
+              <IonInputPasswordToggle slot="end" />
+            </IonInput>
 
             <IonButton
               expand="block"

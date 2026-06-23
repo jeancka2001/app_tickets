@@ -7,7 +7,7 @@ import { useLocation, useHistory } from 'react-router-dom';
 import {
   checkmarkCircleOutline, openOutline, cameraOutline,
   copyOutline, checkmarkOutline, alertCircleOutline,
-  closeCircleOutline,
+  closeCircleOutline, logoWhatsapp,
 } from 'ionicons/icons';
 import axios from 'axios';
 import './Pago.css';
@@ -54,7 +54,7 @@ const METODOS = [
 ];
 
 const CUENTAS = [
-  { banco: 'Banco Pichincha',  cuenta: '2100298093', ruc: '0993377293001', tipo: 'Ahorros'   },
+  { banco: 'Banco Pichincha', cuenta: '2100298093', ruc: '0993377293001', tipo: 'Corriente'   },
   { banco: 'Banco Guayaquil',  cuenta: '18057352',   ruc: '0993377293001', tipo: 'Corriente' },
 ];
 
@@ -92,8 +92,14 @@ const Pago: React.FC = () => {
 
   const met = METODOS.find(x => x.key === metodo)!;
 
-  const subtotal         = (st.precio || 0) * (st.cantidad || 1);
-  const comisionServicio = (st.cantidad || 1) * (st.comisionBoleto || 0);
+  /* Convertir siempre a number — location.state puede venir como string
+     cuando Ionic reutiliza la página en la pila de navegación */
+  const precioNum   = Number(st.precio        || 0);
+  const cantidadNum = Number(st.cantidad      || 1);
+  const comBoleto   = Number(st.comisionBoleto || 0);
+
+  const subtotal         = precioNum * cantidadNum;
+  const comisionServicio = cantidadNum * comBoleto;
   const ivaRate          = parseFloat((st.iva || '1.00').replace('1.', '0.'));
   const ivaImporte       = subtotal * ivaRate;
   const comisionBancaria = (subtotal + ivaImporte) * met.pct;
@@ -211,40 +217,24 @@ const Pago: React.FC = () => {
   };
 
   /* ── Confirmar pago con datos OCR ── */
-  const confirmarDeposito = async () => {
+  const confirmarDeposito = async (forzarRevision = false) => {
     if (!imagenUrl) { setErrorDep('Adjunta la imagen del comprobante.'); return; }
-
-    const numTx   = String(ocr?.numero_comprobante || ocr?.referencia || '').trim();
-    const banco   = String(ocr?.banco_emisor || ocr?.banco_receptor || '').trim();
-    const montoOCR  = Number(ocr?.monto);
-    const montoOk   = Number.isFinite(montoOCR) && Math.abs(montoOCR - total) <= 0.05;
-    const nivelSosp = String(ocr?.validacion?.nivel_sospecha || '').toLowerCase();
-    const adulter   = Boolean(ocr?.validacion?.posible_adulteracion);
-    const estadoOcr = String(ocr?.estado || '').toLowerCase();
-
-    const esOCRFuerte = ocr !== null
-      && estadoOcr === 'aprobado'
-      && nivelSosp === 'bajo'
-      && !adulter
-      && montoOk
-      && numTx.length >= 4;
-
     setEnviandoPago(true);
     setErrorDep('');
     try {
       const { data } = await axios.post(
         `${URL_BASE}/registraPagos`,
         {
-          id:               idRegistro,
-          id_usuario:       ud.id || ud.id_usuario || 0,
-          forma_pago:       'Deposito',
-          link_comprobante: imagenUrl,
-          numeroTransaccion: numTx,
-          estado:           esOCRFuerte ? 'Pagado' : 'Comprobar',
-          banco,
-          bancos:           banco,
-          cedula:           ud.cedula || '',
-          total_pago:       total.toFixed(2),
+          id:                idRegistro,
+          id_usuario:        ud.id || ud.id_usuario || 0,
+          forma_pago:        'Deposito',
+          link_comprobante:  imagenUrl,
+          numeroTransaccion: numTxDep,
+          estado:            (!forzarRevision && esOCRFuerte) ? 'Pagado' : 'Comprobar',
+          banco:             bancoDep,
+          bancos:            bancoDep,
+          cedula:            ud.cedula || '',
+          total_pago:        total.toFixed(2),
         },
         { headers: API_HDR }
       );
@@ -260,16 +250,39 @@ const Pago: React.FC = () => {
     }
   };
 
-  /* ─────────────────────────────────── ÉXITO ── */
-  if (fase === 'exito') {
-    return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar className="pago-toolbar">
-            <IonTitle>Pago registrado</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="pago-content">
+  /* Variables derivadas para la fase depósito */
+  const numTxDep   = String(ocr?.numero_comprobante || ocr?.referencia || '').trim();
+  const bancoDep   = String(ocr?.banco_emisor || ocr?.banco_receptor || '').trim();
+  const montoOCR   = Number(ocr?.monto);
+  const montoOk    = Number.isFinite(montoOCR) && Math.abs(montoOCR - total) <= 0.05;
+  const ocrOk      = String(ocr?.estado || '').toLowerCase() === 'aprobado';
+  const nivelSosp  = String(ocr?.validacion?.nivel_sospecha || '').toLowerCase();
+  const adulter    = Boolean(ocr?.validacion?.posible_adulteracion);
+  const esOCRFuerte = ocr !== null && ocrOk && nivelSosp === 'bajo' && !adulter && montoOk && numTxDep.length >= 4;
+  const tieneProblema = !analizando && (ocrError || (ocr !== null && !esOCRFuerte));
+
+  /* ── Un único IonPage siempre montado — evita blank screen en Ionic ── */
+  return (
+    <IonPage>
+      <IonHeader>
+        <IonToolbar className="pago-toolbar">
+          {fase === 'seleccion' && (
+            <IonButtons slot="start">
+              <IonBackButton defaultHref="/dashboard/eventos" text="" />
+            </IonButtons>
+          )}
+          <IonTitle>
+            {fase === 'exito' ? 'Pago registrado'
+              : fase === 'deposito' ? 'Realizar transferencia'
+              : 'Confirmar pago'}
+          </IonTitle>
+        </IonToolbar>
+      </IonHeader>
+
+      <IonContent className="pago-content">
+
+        {/* ─── ÉXITO ─── */}
+        {fase === 'exito' && (
           <div className="pago-exito">
             <IonIcon icon={checkmarkCircleOutline} className="pago-exito-icon" />
             <h2>¡Pedido registrado!</h2>
@@ -288,36 +301,18 @@ const Pago: React.FC = () => {
               Ver mis compras
             </IonButton>
           </div>
-        </IonContent>
-      </IonPage>
-    );
-  }
+        )}
 
-  /* ─────────────────────────────────── DEPÓSITO ── */
-  if (fase === 'deposito') {
-    const numTx  = String(ocr?.numero_comprobante || ocr?.referencia || '');
-    const montoOCR = Number(ocr?.monto);
-    const montoOk  = Number.isFinite(montoOCR) && Math.abs(montoOCR - total) <= 0.05;
-    const ocrOk    = String(ocr?.estado || '').toLowerCase() === 'aprobado';
-
-    return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar className="pago-toolbar">
-            <IonTitle>Realizar transferencia</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="pago-content">
+        {/* ─── DEPÓSITO ─── */}
+        {fase === 'deposito' && (
           <div className="pago-container">
 
-            {/* Total */}
             <div className="pago-card dep-total-card">
               <p className="dep-total-label">Total a transferir</p>
               <p className="dep-total-monto">${total.toFixed(2)}</p>
               <p className="dep-total-sub">{st.nombreEvento || '—'}</p>
             </div>
 
-            {/* Cuentas bancarias */}
             <div className="pago-card">
               <h3 className="pago-card-title">Cuentas bancarias</h3>
               {CUENTAS.map(c => (
@@ -352,25 +347,17 @@ const Pago: React.FC = () => {
               ))}
             </div>
 
-            {/* Comprobante + OCR */}
             <div className="pago-card">
               <h3 className="pago-card-title">Comprobante de transferencia</h3>
 
-              <input
-                type="file"
-                accept="image/*"
-                ref={inputRef}
-                style={{ display: 'none' }}
-                onChange={handleImageChange}
-              />
+              <input type="file" accept="image/*" ref={inputRef}
+                style={{ display: 'none' }} onChange={handleImageChange} />
 
-              {/* Área de upload o preview */}
               {imagenLocal ? (
                 <div className="dep-preview">
                   <img src={imagenLocal} alt="Comprobante" className="dep-preview-img" />
                   {!analizando && (
-                    <button className="dep-change-btn"
-                      onClick={() => inputRef.current?.click()}>
+                    <button className="dep-change-btn" onClick={() => inputRef.current?.click()}>
                       Cambiar imagen
                     </button>
                   )}
@@ -383,7 +370,6 @@ const Pago: React.FC = () => {
                 </div>
               )}
 
-              {/* Analizando */}
               {analizando && (
                 <div className="dep-ocr-loading">
                   <IonSpinner name="crescent" />
@@ -391,7 +377,6 @@ const Pago: React.FC = () => {
                 </div>
               )}
 
-              {/* Error OCR */}
               {ocrError && !analizando && (
                 <div className="dep-ocr-chip dep-ocr-chip-error">
                   <IonIcon icon={closeCircleOutline} />
@@ -399,27 +384,24 @@ const Pago: React.FC = () => {
                 </div>
               )}
 
-              {/* Resultados OCR */}
               {ocr && !analizando && (
                 <div className="dep-ocr-panel">
                   <div className={`dep-ocr-estado ${ocrOk ? 'dep-ocr-ok' : 'dep-ocr-warn'}`}>
                     <IonIcon icon={ocrOk ? checkmarkCircleOutline : alertCircleOutline} />
                     <span>{ocrOk ? 'Comprobante verificado' : 'Requiere revisión manual'}</span>
                   </div>
-
                   <div className="dep-ocr-datos">
-                    {numTx && (
+                    {numTxDep && (
                       <div className="dep-ocr-dato">
                         <span className="dep-ocr-lbl">N° Transacción</span>
-                        <span className="dep-ocr-val">{numTx}</span>
+                        <span className="dep-ocr-val">{numTxDep}</span>
                       </div>
                     )}
                     {ocr.monto !== undefined && (
                       <div className="dep-ocr-dato">
                         <span className="dep-ocr-lbl">Monto detectado</span>
                         <span className={`dep-ocr-val ${montoOk ? 'dep-ocr-monto-ok' : 'dep-ocr-monto-err'}`}>
-                          ${Number(ocr.monto).toFixed(2)}
-                          {montoOk ? ' ✓' : ' — difiere del total'}
+                          ${Number(ocr.monto).toFixed(2)}{montoOk ? ' ✓' : ' — difiere del total'}
                         </span>
                       </div>
                     )}
@@ -448,144 +430,154 @@ const Pago: React.FC = () => {
 
             {errorDep && <p className="pago-error">{errorDep}</p>}
 
-            <IonButton
-              expand="block"
-              className="btn-confirmar"
-              onClick={confirmarDeposito}
-              disabled={!imagenUrl || analizando || enviandoPago}>
-              {enviandoPago
-                ? <><IonSpinner name="crescent" className="btn-spinner" /> Registrando pago…</>
-                : 'Confirmar pago'
-              }
-            </IonButton>
+            {/* Sin imagen todavía o analizando → botón deshabilitado */}
+            {(!imagenUrl || analizando) && (
+              <IonButton expand="block" className="btn-confirmar" disabled>
+                {analizando
+                  ? <><IonSpinner name="crescent" className="btn-spinner" /> Analizando…</>
+                  : 'Confirmar pago'
+                }
+              </IonButton>
+            )}
+
+            {/* OCR perfecto y monto coincide → confirmar directamente */}
+            {imagenUrl && !analizando && esOCRFuerte && (
+              <IonButton expand="block" className="btn-confirmar"
+                onClick={() => confirmarDeposito(false)} disabled={enviandoPago}>
+                {enviandoPago
+                  ? <><IonSpinner name="crescent" className="btn-spinner" /> Registrando pago…</>
+                  : 'Confirmar pago'
+                }
+              </IonButton>
+            )}
+
+            {/* Problema en OCR o monto incorrecto → revisión manual o WhatsApp */}
+            {tieneProblema && (
+              <div className="dep-botones-alt">
+                <IonButton expand="block" className="btn-confirmar"
+                  onClick={() => confirmarDeposito(true)} disabled={!imagenUrl || enviandoPago}>
+                  {enviandoPago
+                    ? <><IonSpinner name="crescent" className="btn-spinner" /> Enviando…</>
+                    : 'Enviar para revisión manual'
+                  }
+                </IonButton>
+                <IonButton expand="block" fill="outline" className="btn-whatsapp"
+                  onClick={() => window.open('https://api.whatsapp.com/send?phone=593980009000', '_blank')}>
+                  <IonIcon icon={logoWhatsapp} slot="start" />
+                  Contactar por WhatsApp
+                </IonButton>
+              </div>
+            )}
 
             <p className="pago-disclaimer">
               Tu pago será verificado y recibirás confirmación por correo electrónico.
             </p>
-
           </div>
-        </IonContent>
-      </IonPage>
-    );
-  }
+        )}
 
-  /* ─────────────────────────────────── SELECCIÓN ── */
-  return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar className="pago-toolbar">
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/dashboard/eventos" text="" />
-          </IonButtons>
-          <IonTitle>Confirmar pago</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+        {/* ─── SELECCIÓN ─── */}
+        {fase === 'seleccion' && (
+          <div className="pago-container">
 
-      <IonContent className="pago-content">
-        <div className="pago-container">
-
-          {/* Resumen */}
-          <div className="pago-card">
-            <h3 className="pago-card-title">Resumen de compra</h3>
-            <p className="pago-evento-nombre">{st.nombreEvento || '—'}</p>
-            <div className="pago-fila">
-              <span className="pago-lbl">Localidad</span>
-              <span className="pago-val">{st.localidadNombre || '—'}</span>
+            <div className="pago-card">
+              <h3 className="pago-card-title">Resumen de compra</h3>
+              <p className="pago-evento-nombre">{st.nombreEvento || '—'}</p>
+              <div className="pago-fila">
+                <span className="pago-lbl">Localidad</span>
+                <span className="pago-val">{st.localidadNombre || '—'}</span>
+              </div>
+              <div className="pago-fila">
+                <span className="pago-lbl">Cantidad</span>
+                <span className="pago-val">
+                  {st.idSillas?.length
+                    ? `${st.idSillas.length} asiento${st.idSillas.length > 1 ? 's' : ''}`
+                    : `${cantidadNum} boleto${cantidadNum > 1 ? 's' : ''}`}
+                </span>
+              </div>
+              <div className="pago-fila">
+                <span className="pago-lbl">Precio por boleto</span>
+                <span className="pago-val">${precioNum.toFixed(2)}</span>
+              </div>
             </div>
-            <div className="pago-fila">
-              <span className="pago-lbl">Cantidad</span>
-              <span className="pago-val">
-                {st.idSillas?.length
-                  ? `${st.idSillas.length} asiento${st.idSillas.length > 1 ? 's' : ''}`
-                  : `${st.cantidad || 1} boleto${(st.cantidad || 1) > 1 ? 's' : ''}`}
-              </span>
-            </div>
-            <div className="pago-fila">
-              <span className="pago-lbl">Precio por boleto</span>
-              <span className="pago-val">${(st.precio || 0).toFixed(2)}</span>
-            </div>
-          </div>
 
-          {/* Método */}
-          <div className="pago-card">
-            <h3 className="pago-card-title">Método de pago</h3>
-            <div className="metodos-lista">
-              {METODOS.map(m => (
-                <div key={m.key}
-                  className={`metodo-item ${metodo === m.key ? 'metodo-sel' : ''}`}
-                  onClick={() => setMetodo(m.key)}>
-                  <div className={`radio-circle ${metodo === m.key ? 'radio-on' : ''}`} />
-                  <div className="metodo-info">
-                    <span className="metodo-lbl">{m.label}</span>
-                    <span className="metodo-desc">{m.desc}</span>
+            <div className="pago-card">
+              <h3 className="pago-card-title">Método de pago</h3>
+              <div className="metodos-lista">
+                {METODOS.map(m => (
+                  <div key={m.key}
+                    className={`metodo-item ${metodo === m.key ? 'metodo-sel' : ''}`}
+                    onClick={() => setMetodo(m.key)}>
+                    <div className={`radio-circle ${metodo === m.key ? 'radio-on' : ''}`} />
+                    <div className="metodo-info">
+                      <span className="metodo-lbl">{m.label}</span>
+                      <span className="metodo-desc">{m.desc}</span>
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pago-card">
+              <h3 className="pago-card-title">Detalle de precios</h3>
+              <div className="pago-fila">
+                <span className="pago-lbl">Subtotal</span>
+                <span className="pago-val">${subtotal.toFixed(2)}</span>
+              </div>
+              {comisionServicio > 0 && (
+                <div className="pago-fila">
+                  <span className="pago-lbl">Servicio Em. por Boleto</span>
+                  <span className="pago-val">${comisionServicio.toFixed(2)}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Detalle precios */}
-          <div className="pago-card">
-            <h3 className="pago-card-title">Detalle de precios</h3>
-            <div className="pago-fila">
-              <span className="pago-lbl">Subtotal</span>
-              <span className="pago-val">${subtotal.toFixed(2)}</span>
-            </div>
-            {comisionServicio > 0 && (
+              )}
+              {ivaImporte > 0 && (
+                <div className="pago-fila">
+                  <span className="pago-lbl">IVA ({Math.round(ivaRate * 100)}%)</span>
+                  <span className="pago-val">${ivaImporte.toFixed(2)}</span>
+                </div>
+              )}
               <div className="pago-fila">
-                <span className="pago-lbl">Servicio Em. por Boleto</span>
-                <span className="pago-val">${comisionServicio.toFixed(2)}</span>
+                <span className="pago-lbl">Comisión Bancaria ({Math.round(met.pct * 100)}%)</span>
+                <span className="pago-val">${comisionBancaria.toFixed(2)}</span>
               </div>
-            )}
-            {ivaImporte > 0 && (
+              <div className="pago-divider" />
+              <div className="pago-fila pago-total-row">
+                <span>TOTAL A PAGAR</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="pago-card">
+              <h3 className="pago-card-title">Datos del comprador</h3>
               <div className="pago-fila">
-                <span className="pago-lbl">IVA ({Math.round(ivaRate * 100)}%)</span>
-                <span className="pago-val">${ivaImporte.toFixed(2)}</span>
+                <span className="pago-lbl">Nombre</span>
+                <span className="pago-val">{ud.nombreCompleto || ud.nombres || '—'}</span>
               </div>
-            )}
-            <div className="pago-fila">
-              <span className="pago-lbl">Comisión Bancaria ({Math.round(met.pct * 100)}%)</span>
-              <span className="pago-val">${comisionBancaria.toFixed(2)}</span>
+              <div className="pago-fila">
+                <span className="pago-lbl">Cédula</span>
+                <span className="pago-val">{ud.cedula || '—'}</span>
+              </div>
+              <div className="pago-fila">
+                <span className="pago-lbl">Correo</span>
+                <span className="pago-val">{ud.email || '—'}</span>
+              </div>
             </div>
-            <div className="pago-divider" />
-            <div className="pago-fila pago-total-row">
-              <span>TOTAL A PAGAR</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
+
+            {error && <p className="pago-error">{error}</p>}
+
+            <IonButton expand="block" className="btn-confirmar"
+              onClick={confirmar} disabled={cargando}>
+              {cargando
+                ? <><IonSpinner name="crescent" className="btn-spinner" /> Procesando…</>
+                : `Confirmar y pagar  $${total.toFixed(2)}`
+              }
+            </IonButton>
+
+            <p className="pago-disclaimer">
+              Al confirmar aceptas los términos y condiciones del evento.
+            </p>
           </div>
+        )}
 
-          {/* Comprador */}
-          <div className="pago-card">
-            <h3 className="pago-card-title">Datos del comprador</h3>
-            <div className="pago-fila">
-              <span className="pago-lbl">Nombre</span>
-              <span className="pago-val">{ud.nombreCompleto || ud.nombres || '—'}</span>
-            </div>
-            <div className="pago-fila">
-              <span className="pago-lbl">Cédula</span>
-              <span className="pago-val">{ud.cedula || '—'}</span>
-            </div>
-            <div className="pago-fila">
-              <span className="pago-lbl">Correo</span>
-              <span className="pago-val">{ud.email || '—'}</span>
-            </div>
-          </div>
-
-          {error && <p className="pago-error">{error}</p>}
-
-          <IonButton expand="block" className="btn-confirmar"
-            onClick={confirmar} disabled={cargando}>
-            {cargando
-              ? <><IonSpinner name="crescent" className="btn-spinner" /> Procesando…</>
-              : `Confirmar y pagar  $${total.toFixed(2)}`
-            }
-          </IonButton>
-
-          <p className="pago-disclaimer">
-            Al confirmar aceptas los términos y condiciones del evento.
-          </p>
-
-        </div>
       </IonContent>
     </IonPage>
   );
