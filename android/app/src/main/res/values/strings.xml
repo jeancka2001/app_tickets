@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">app_tickets</string>
-    <string name="title_activity_main">app_tickets</string>
-    <string name="package_name">io.ionic.starter</string>
-    <string name="custom_url_scheme">io.ionic.starter</string>
+    <string name="app_name">T-ickets</string>
+    <string name="title_activity_main">T-ickets</string>
+    <string name="package_name">ec.tickets.app</string>
+    <string name="custom_url_scheme">ec.tickets.app</string>
 </resources>
