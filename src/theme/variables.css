@@ -1,2 +1,79 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
+
+/* Marca de agua – logo semitransparente en fondo de página */
+.page-watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68vw;
+  max-width: 270px;
+  opacity: 0.055;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+.page-watermark img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  .page-watermark { opacity: 0.08; filter: brightness(6); }
+}
+
+/* Logo en toolbar – compartido por todas las páginas */
+.toolbar-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  margin-left: 6px;
+  display: block;
+}
+
+/* Botón recargar (toolbar superior) */
+.btn-recargar {
+  --color: rgba(255,255,255,0.9);
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --ripple-color: rgba(255,255,255,0.2);
+}
+.btn-recargar ion-icon {
+  font-size: 1.3rem;
+  transition: transform 0.3s;
+}
+.btn-recargar.btn-cargando ion-icon {
+  animation: toolbar-spin 0.8s linear infinite;
+}
+@keyframes toolbar-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-background-color:        #101624;
+    --ion-background-color-rgb:    16,22,36;
+    --ion-text-color:              #e8ecf5;
+    --ion-text-color-rgb:          232,236,245;
+    --ion-border-color:            #2a3050;
+    --ion-item-background:         #1a2035;
+    --ion-card-background:         #1a2035;
+    --ion-toolbar-background:      #1a1e52;
+    --ion-tab-bar-background:      #1a2035;
+    --ion-tab-bar-border-color:    #2a3050;
+    --ion-color-step-50:           #1a2035;
+    --ion-color-step-100:          #1e2540;
+    --ion-color-step-150:          #222a45;
+    --ion-color-step-200:          #262e50;
+    --ion-color-step-300:          #2e355a;
+    --ion-color-step-400:          #363d64;
+    --ion-color-step-500:          #3e456e;
+    --ion-color-step-600:          #464d78;
+    --ion-color-step-700:          #4e5582;
+    --ion-color-step-800:          #565d8c;
+    --ion-color-step-900:          #5e6596;
+    --ion-color-step-950:          #62699b;
+  }
+}

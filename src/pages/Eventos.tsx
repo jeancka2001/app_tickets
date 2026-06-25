@@ -28,6 +28,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
+import marcaTickets from '../images/MARCA_TICKETS.png';
 import './Eventos.css';
 
 interface Localidad {
@@ -170,6 +171,9 @@ const Eventos: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="eventos-toolbar">
+          <IonButtons slot="start">
+            <img src={marcaTickets} alt="T-ickets" className="toolbar-logo" />
+          </IonButtons>
           <IonTitle>Eventos</IonTitle>
         </IonToolbar>
         <IonToolbar className="search-toolbar">

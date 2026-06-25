@@ -486,6 +486,143 @@
   gap: 10px;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   BANCO GUAYAQUIL / RECAUDACIÓN
+   ═══════════════════════════════════════════════════════════════ */
+
+.bg-orden-header {
+  text-align: center;
+  padding: 4px 0 8px;
+}
+.bg-orden-label {
+  font-size: 0.82rem;
+  color: #6b7a90;
+  margin: 0 0 4px;
+}
+.bg-orden-sub {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a1e52;
+  margin: 0;
+}
+
+.bg-codigo-card { padding: 0; overflow: hidden; }
+
+.bg-servicio-bar {
+  background: #1a1e52;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bg-servicio-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+.bg-servicio-empresa {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.bg-codigo-row {
+  display: flex;
+  border-bottom: 1px solid #f0f2f8;
+}
+.bg-codigo-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px;
+  gap: 6px;
+}
+.bg-codigo-col:first-child {
+  border-right: 1px solid #f0f2f8;
+}
+.bg-col-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #9da5b4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bg-col-valor {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.bg-codigo-val { color: #e74c3c; }
+.bg-monto-val  { color: #27ae60; }
+
+.bg-copiar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  background: #f8f9fe;
+  border: none;
+  border-top: 1px solid #f0f2f8;
+  color: #2d358c;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bg-copiar-btn ion-icon { font-size: 1rem; }
+.bg-copiar-btn:active { background: #eef0fb; }
+
+.bg-pasos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: paso;
+}
+.bg-paso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: #4a5568;
+  line-height: 1.5;
+  counter-increment: paso;
+}
+.bg-paso::before {
+  content: counter(paso);
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2d358c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.bg-canales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bg-canal-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2d358c;
+  background: #eef0fb;
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+
 .btn-whatsapp {
   --border-radius: 12px;
   --color: #25d366;
@@ -494,4 +631,74 @@
   font-size: 1rem;
   height: 52px;
   margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pago-content   { --background: #101624; }
+
+  .pago-card {
+    background: #1a2035;
+    box-shadow: 0 3px 12px rgba(0,0,0,.4);
+  }
+  .pago-card-title    { color: #6b7a90; }
+  .pago-evento-nombre { color: #e8ecf5; }
+  .pago-fila          { border-bottom-color: #2a3050; }
+  .pago-lbl           { color: #9da5b4; }
+  .pago-val           { color: #e8ecf5; }
+  .pago-divider       { background: #2a3050; }
+  .pago-total-row     { color: #7b8fdc; }
+  .pago-disclaimer    { color: #6b7a90; }
+
+  .metodo-item        { border-color: #2a3050; }
+  .metodo-item:active { background: #1e2540; }
+  .metodo-sel         { border-color: #7b8fdc; background: #1e2540; }
+  .radio-circle       { border-color: #2a3050; }
+  .radio-on           { border-color: #7b8fdc; background: #7b8fdc; }
+  .metodo-lbl         { color: #e8ecf5; }
+  .metodo-desc        { color: #6b7a90; }
+
+  .pago-exito h2      { color: #e8ecf5; }
+  .pago-exito p       { color: #9da5b4; }
+  .pago-exito-icon    { color: #4ade80; }
+
+  .dep-total-card {
+    background: linear-gradient(135deg, #1a1e52 0%, #2d358c 100%);
+  }
+  .dep-cuenta         { border-color: #2a3050; }
+  .dep-banco-nombre   { color: #e8ecf5; }
+  .dep-dato-lbl       { color: #6b7a90; }
+  .dep-dato-val       { color: #e8ecf5; }
+  .dep-dato-fila      { border-top-color: #2a3050; }
+  .dep-copy-btn       { background: #1e2540; color: #7b8fdc; }
+  .dep-copy-btn:active { background: #262e55; }
+
+  .dep-upload-area    { border-color: #2a3050; background: #161d30; }
+  .dep-upload-area:active { border-color: #7b8fdc; background: #1e2540; }
+  .dep-upload-icon    { color: #7b8fdc; }
+  .dep-upload-texto   { color: #e8ecf5; }
+  .dep-upload-sub     { color: #6b7a90; }
+  .dep-change-btn     { border-color: #2a3050; color: #9da5b4; background: #1a2035; }
+
+  .dep-ocr-loading    { background: #1e2540; color: #7b8fdc; }
+  .dep-ocr-panel      { border-color: #2a3050; }
+  .dep-ocr-ok         { background: #0e2a18; color: #4ade80; }
+  .dep-ocr-warn       { background: #2a1e00; color: #fcd34d; }
+  .dep-ocr-chip-error { background: #2a0e0e; color: #f87171; }
+  .dep-ocr-dato       { border-top-color: #2a3050; }
+  .dep-ocr-lbl        { color: #6b7a90; }
+  .dep-ocr-val        { color: #e8ecf5; }
+  .dep-ocr-monto-ok   { color: #4ade80; }
+  .dep-ocr-monto-err  { color: #fcd34d; }
+
+  .bg-orden-sub     { color: #e8ecf5; }
+  .bg-orden-label   { color: #6b7a90; }
+  .bg-servicio-bar  { background: #0e1422; }
+  .bg-codigo-col    { border-color: #2a3050; }
+  .bg-codigo-col:first-child { border-right-color: #2a3050; }
+  .bg-codigo-row    { border-bottom-color: #2a3050; }
+  .bg-col-label     { color: #6b7a90; }
+  .bg-copiar-btn    { background: #1e2540; color: #7b8fdc; border-top-color: #2a3050; }
+  .bg-copiar-btn:active { background: #262e55; }
+  .bg-paso          { color: #9da5b4; }
+  .bg-canal-chip    { background: #1e2540; color: #7b8fdc; }
 }

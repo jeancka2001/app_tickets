@@ -222,6 +222,73 @@
 .seat-loading { opacity: 0.55; cursor: wait; animation: pulse .6s infinite; }
 @keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.25; } }
 
+@media (prefers-color-scheme: dark) {
+  .loc-content    { --background: #101624; }
+
+  .venue-label    { color: #6b7a90; }
+  .venue-img      { box-shadow: 0 3px 10px rgba(0,0,0,.4); }
+
+  .loc-loading    { color: #6b7a90; }
+  .loc-loading ion-spinner { color: #7b8fdc; }
+
+  .ch-total { background: #1e2540; color: #7b8fdc; }
+  .ch-disp  { background: #0e2a18; color: #4ade80; }
+  .ch-ocp   { background: #2a0e0e; color: #f87171; }
+
+  .corr-view {
+    background: #1a2035;
+    box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  }
+  .corr-desc  { color: #9da5b4; }
+  .qty-btn {
+    background: #1a2035;
+    border-color: #7b8fdc;
+    color: #7b8fdc;
+  }
+  .qty-btn:active { background: #222840; }
+  .qty-num        { color: #e8ecf5; }
+  .price-line     { color: #9da5b4; }
+  .price-line strong { color: #7b8fdc; }
+
+  .zoom-bar {
+    background: #1a2035;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+  .z-pct  { color: #7b8fdc; }
+
+  .l-disp { background: #0e2a18; color: #4ade80; border-color: #27ae60; }
+  .l-ocp  { background: #2a0e0e; color: #f87171; border-color: #e74c3c; }
+  .l-sel  { background: #2a1e00; color: #fcd34d; border-color: #f59e0b; }
+
+  .max-warn { background: #2a1400; color: #f08121; }
+
+  .map-scroll {
+    background: #0a0f1a;
+    border-color: #2a3050;
+  }
+
+  .escenario  { color: #6b7a90; border-bottom-color: #2a3050; }
+
+  .fila-tag span  { color: #7b8fdc; }
+  .fila-tag small { color: #4ade80; }
+
+  .fila-title { color: #7b8fdc; border-bottom-color: #2a3050; }
+
+  .mesa-box {
+    background: #1a2035;
+    border-color: #27ae60;
+  }
+  .mesa-box-llena { border-color: #e74c3c; }
+  .mesa-box-sel   { border-color: #f59e0b; background: #1e1800; }
+  .mesa-lbl       { color: #7b8fdc; background: #1e2540; }
+  .mesa-disp-cnt  { color: #4ade80; }
+  .cnt-llena      { color: #f87171; }
+
+  .sc-disp { background: #0e2a18; color: #4ade80; border-color: #27ae60; }
+  .sc-ocp  { background: #2a0e0e; color: #f87171; border-color: #e74c3c; }
+  .sc-sel  { background: #2a1e00; color: #fcd34d; border-color: #f59e0b; }
+}
+
 /* ── FOOTER CARRITO ───────────────────────────────────────── */
 .cart-footer {
   position: fixed; bottom: 0; left: 0; right: 0;

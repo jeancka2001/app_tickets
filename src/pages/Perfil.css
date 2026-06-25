@@ -93,7 +93,130 @@
   margin: 0;
 }
 
-.perfil-logout { padding: 28px 16px 32px; }
+/* ── Cabecera sección con botón editar ─────────────────────── */
+.perfil-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 8px;
+}
+
+.btn-editar-perfil {
+  --color: #2d358c;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  height: 30px;
+  margin: 0;
+}
+
+/* ── Modal editar ──────────────────────────────────────────── */
+.edit-modal-body {
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #eef0fb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.edit-aviso-icon {
+  font-size: 1.4rem;
+  color: #2d358c;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.edit-aviso p {
+  font-size: 0.83rem;
+  color: #2d358c;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.edit-inp {
+  --border-radius: 10px;
+  --color: #1a1e52;
+  --highlight-color-focused: #2d358c;
+}
+
+.btn-guardar-perfil {
+  --background: #2d358c;
+  --background-activated: #1a1e52;
+  --border-radius: 12px;
+  --color: #ffffff;
+  font-weight: 700;
+  height: 50px;
+  margin-top: 6px;
+}
+
+.perfil-soporte { padding: 0 16px; }
+
+.perfil-logout { padding: 12px 16px 32px; }
+
+@media (prefers-color-scheme: dark) {
+  .perfil-content { --background: #101624; }
+
+  .perfil-items {
+    background: #1a2035;
+    box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  }
+  .perfil-item {
+    --background: #1a2035;
+    border-bottom-color: #2a3050;
+  }
+  .item-icon      { color: #7b8fdc; }
+  .item-label     { color: #6b7a90; }
+  .item-value     { color: #e8ecf5; }
+
+  .perfil-section-title { color: #6b7a90; }
+
+  .btn-logout {
+    --background: #1e1010;
+    --background-activated: #2a0e0e;
+    --color: #f87171;
+    --box-shadow: none;
+    border: 1px solid #4a1a1a;
+  }
+
+  .btn-whatsapp-perfil {
+    --background: #25d366;
+    --background-activated: #1da851;
+    --background-hover: #20bd5a;
+  }
+
+  .btn-editar-perfil { --color: #7b8fdc; }
+
+  .edit-aviso {
+    background: #1e2540;
+  }
+  .edit-aviso p       { color: #7b8fdc; }
+  .edit-aviso-icon    { color: #7b8fdc; }
+
+  .edit-inp {
+    --color: #e8ecf5;
+    --background: #222840;
+  }
+}
+
+.btn-whatsapp-perfil {
+  --background: #25d366;
+  --background-activated: #1da851;
+  --background-hover: #20bd5a;
+  --border-radius: 12px;
+  --color: #ffffff;
+  --box-shadow: 0 2px 12px rgba(37, 211, 102, 0.25);
+  font-weight: 700;
+  height: 50px;
+}
 
 .btn-logout {
   --background: #fff;

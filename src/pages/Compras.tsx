@@ -2,16 +2,18 @@ import { useState, useRef } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonIcon, IonButton, IonSpinner, IonBadge,
-  IonModal, IonButtons, IonInput, IonSelect, IonSelectOption,
+  IonModal, IonButtons,
   IonAlert, IonToast, useIonViewWillEnter,
 } from '@ionic/react';
 import {
   closeOutline, alertCircleOutline, openOutline,
   checkmarkCircleOutline, closeCircleOutline,
   refreshOutline, calendarNumberOutline, pricetagOutline,
+  cameraOutline, copyOutline, checkmarkOutline, logoWhatsapp,
 } from 'ionicons/icons';
 import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
+import marcaTickets from '../images/MARCA_TICKETS.png';
 import './Compras.css';
 
 const API_HDR = {
@@ -49,6 +51,23 @@ interface Registro {
   canal: string;
 }
 
+interface OcrExtracto {
+  numero_comprobante?: string;
+  referencia?: string;
+  monto?: string | number;
+  fecha?: string;
+  banco_emisor?: string;
+  banco_receptor?: string;
+  nombre_receptor?: string;
+  estado?: string;
+  validacion?: { nivel_sospecha?: string; posible_adulteracion?: boolean };
+}
+
+const CUENTAS = [
+  { banco: 'Banco Pichincha', cuenta: '2100298093', ruc: '0993377293001', tipo: 'Corriente' },
+  { banco: 'Banco Guayaquil',  cuenta: '18057352',   ruc: '0993377293001', tipo: 'Corriente' },
+];
+
 const estadoColor: Record<string, string> = {
   Pagado:    'badge-reg-pagado',
   Pendiente: 'badge-reg-pendiente',
@@ -57,7 +76,6 @@ const estadoColor: Record<string, string> = {
   Expirado:  'badge-reg-expirado',
 };
 
-const BANCOS = ['Banco Pichincha', 'Banco Guayaquil', 'Produbanco', 'Banco del Austro', 'Banco Internacional'];
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const formatFecha = (fecha: string) => {
@@ -86,7 +104,6 @@ const Compras: React.FC = () => {
   /* ── Historial ── */
   const [historial, setHistorial]       = useState<Registro[]>([]);
   const [cargandoHist, setCargandoHist] = useState(false);
-  const [mostrarHist, setMostrarHist]   = useState(false);
 
   /* ── Anular ── */
   const [alertAnular, setAlertAnular]   = useState(false);
@@ -94,11 +111,16 @@ const Compras: React.FC = () => {
   const [anulando, setAnulando]         = useState(false);
 
   /* ── Reportar depósito ── */
-  const [modalReporte, setModalReporte] = useState(false);
-  const reporteTarget                   = useRef<Registro | null>(null);
-  const [banco, setBanco]               = useState('');
-  const [codigo, setCodigo]             = useState('');
-  const [reportando, setReportando]     = useState(false);
+  const [modalReporte, setModalReporte]     = useState(false);
+  const reporteTarget                       = useRef<Registro | null>(null);
+  const [reportando, setReportando]         = useState(false);
+  const reporteInputRef                     = useRef<HTMLInputElement>(null);
+  const [repImagenLocal, setRepImagenLocal] = useState<string | null>(null);
+  const [repImagenUrl, setRepImagenUrl]     = useState<string | null>(null);
+  const [repAnalizando, setRepAnalizando]   = useState(false);
+  const [repOcr, setRepOcr]                 = useState<OcrExtracto | null>(null);
+  const [repOcrError, setRepOcrError]       = useState(false);
+  const [repCopiado, setRepCopiado]         = useState<string | null>(null);
 
   /* ── Toast ── */
   const [toast, setToast]               = useState('');
@@ -138,6 +160,7 @@ const Compras: React.FC = () => {
 
   useIonViewWillEnter(() => {
     cargarPendientes();
+    cargarHistorial();
     refreshPendientes();
   });
 
@@ -164,31 +187,98 @@ const Compras: React.FC = () => {
     } finally { setAnulando(false); anularTarget.current = null; }
   };
 
-  /* ── Reportar depósito ── */
-  const enviarReporte = async () => {
-    const reg = reporteTarget.current;
-    if (!reg || !banco || !codigo.trim()) {
-      showToast('Completa todos los campos.', 'danger'); return;
+  /* ── Reportar depósito — helpers OCR ── */
+  const resetReporte = () => {
+    setRepImagenLocal(null);
+    setRepImagenUrl(null);
+    setRepAnalizando(false);
+    setRepOcr(null);
+    setRepOcrError(false);
+    setRepCopiado(null);
+  };
+
+  const repCopiar = (texto: string, id: string) => {
+    navigator.clipboard.writeText(texto).then(() => {
+      setRepCopiado(id);
+      setTimeout(() => setRepCopiado(null), 2000);
+    }).catch(() => {});
+  };
+
+  const handleRepImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (reporteInputRef.current) reporteInputRef.current.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => setRepImagenLocal(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setRepImagenUrl(null);
+    setRepOcr(null);
+    setRepOcrError(false);
+    setRepAnalizando(true);
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data: up } = await axios.post('https://codigomarret.online/upload/api/img', form);
+      if (!up.success) throw new Error('upload_failed');
+      const url: string = up.url || '';
+      if (!url) throw new Error('no_url');
+      setRepImagenUrl(url);
+
+      const { data: ocrResp } = await axios.post(
+        'https://api.t-ickets.com/mikroti/Boleteria/imagenocr/analizar',
+        { url_imagen: url, request_id: String(Date.now()), guardar_bd: false },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      setRepOcr((ocrResp?.data ?? {}) as OcrExtracto);
+    } catch {
+      setRepOcrError(true);
+    } finally {
+      setRepAnalizando(false);
     }
+  };
+
+  const enviarReporte = async (forzarRevision = false) => {
+    const reg = reporteTarget.current;
+    if (!reg) return;
+    if (!repImagenUrl) {
+      showToast('Adjunta el comprobante de tu transferencia.', 'danger'); return;
+    }
+    const repNumTx    = String(repOcr?.numero_comprobante || repOcr?.referencia || '').trim();
+    const repBancoOcr = String(repOcr?.banco_emisor || repOcr?.banco_receptor || '').trim();
+    const repMontoOCR = Number(repOcr?.monto);
+    const repRegTotal = parseFloat(reg.total_pago || '0');
+    const repMontoOk  = Number.isFinite(repMontoOCR) && Math.abs(repMontoOCR - repRegTotal) <= 0.05;
+    const repOcrOk    = String(repOcr?.estado || '').toLowerCase() === 'aprobado';
+    const repNivel    = String(repOcr?.validacion?.nivel_sospecha || '').toLowerCase();
+    const repAdulter  = Boolean(repOcr?.validacion?.posible_adulteracion);
+    const esOCRFuerte = repOcr !== null && repOcrOk && repNivel === 'bajo' && !repAdulter && repMontoOk && repNumTx.length >= 4;
+
     setReportando(true);
     try {
       const { data } = await axios.post(
         `${URL_BASE}/registraPagos`,
         {
-          id:          reg.id,
-          cedula:      user.cedula,
-          forma_pago:  'Deposito',
-          banco,
-          codigo:      codigo.trim(),
-          id_usuario:  user.id ?? user.id_usuario ?? 0,
-          id_operador: 0,
+          id:                reg.id,
+          cedula:            user.cedula,
+          id_usuario:        user.id ?? user.id_usuario ?? 0,
+          id_operador:       0,
+          forma_pago:        'Deposito',
+          link_comprobante:  repImagenUrl,
+          numeroTransaccion: repNumTx,
+          estado:            (!forzarRevision && esOCRFuerte) ? 'Pagado' : 'Comprobar',
+          banco:             repBancoOcr,
+          bancos:            repBancoOcr,
+          total_pago:        reg.total_pago,
         },
         { headers: API_HDR }
       );
       if (data.success) {
         showToast('Depósito reportado. Te notificaremos cuando sea verificado.');
         setModalReporte(false);
-        setBanco(''); setCodigo('');
+        resetReporte();
         await cargarPendientes();
         await refreshPendientes();
       } else {
@@ -246,7 +336,7 @@ const Compras: React.FC = () => {
             </IonButton>
           ) : (
             <IonButton size="small" className="btn-comp-reportar"
-              onClick={() => { reporteTarget.current = reg; setBanco(''); setCodigo(''); setModalReporte(true); }}>
+              onClick={() => { reporteTarget.current = reg; resetReporte(); setModalReporte(true); }}>
               Reportar depósito
             </IonButton>
           )}
@@ -265,9 +355,15 @@ const Compras: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="compras-toolbar">
+          <IonButtons slot="start">
+            <img src={marcaTickets} alt="T-ickets" className="toolbar-logo" />
+          </IonButtons>
           <IonTitle>Mis Compras</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={cargarPendientes} disabled={cargandoPend} className="btn-recargar">
+            <IonButton
+              onClick={() => { cargarPendientes(); cargarHistorial(); }}
+              disabled={cargandoPend || cargandoHist}
+              className={`btn-recargar ${(cargandoPend || cargandoHist) ? 'btn-cargando' : ''}`}>
               <IonIcon icon={refreshOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
@@ -275,6 +371,9 @@ const Compras: React.FC = () => {
       </IonHeader>
 
       <IonContent className="compras-content">
+        <div aria-hidden="true" className="page-watermark">
+          <img src={marcaTickets} alt="" />
+        </div>
 
         {/* ── COMPRAS PENDIENTES ── */}
         <div className="compras-section-title">
@@ -300,39 +399,30 @@ const Compras: React.FC = () => {
         ))}
 
         {/* ── HISTORIAL ── */}
-        <div className="compras-section-title hist-row">
-          <span>Historial de compras</span>
-          <IonButton fill="clear" size="small" className="btn-hist"
-            onClick={() => { setMostrarHist(v => !v); if (!mostrarHist) cargarHistorial(); }}>
-            {mostrarHist ? 'Ocultar' : 'Ver todo'}
-          </IonButton>
-        </div>
+        <div className="compras-section-title">Historial de compras</div>
 
-        {mostrarHist && (
-          <>
-            {cargandoHist && (
-              <div className="comp-loading"><IonSpinner name="crescent" /></div>
-            )}
-            {!cargandoHist && historial.length === 0 && (
-              <div className="comp-empty"><p>Sin registros de compras.</p></div>
-            )}
-            {!cargandoHist && historial.map(reg => (
-              <CardReg key={reg.id} reg={reg} acciones={false} />
-            ))}
-          </>
+        {cargandoHist && (
+          <div className="comp-loading"><IonSpinner name="crescent" /></div>
         )}
+        {!cargandoHist && historial.length === 0 && (
+          <div className="comp-empty"><p>Sin registros de compras.</p></div>
+        )}
+        {!cargandoHist && historial.map(reg => (
+          <CardReg key={reg.id} reg={reg} acciones={false} />
+        ))}
 
         <div style={{ height: 20 }} />
       </IonContent>
 
       {/* ── Modal Reportar Depósito ── */}
-      <IonModal isOpen={modalReporte} onDidDismiss={() => setModalReporte(false)}
+      <IonModal isOpen={modalReporte}
+        onDidDismiss={() => { setModalReporte(false); resetReporte(); }}
         breakpoints={[0, 1]} initialBreakpoint={1}>
         <IonHeader>
           <IonToolbar className="compras-toolbar">
-            <IonTitle>Reportar depósito</IonTitle>
+            <IonTitle>Reportar transferencia</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setModalReporte(false)}>
+              <IonButton onClick={() => { setModalReporte(false); resetReporte(); }}>
                 <IonIcon icon={closeOutline} />
               </IonButton>
             </IonButtons>
@@ -340,40 +430,175 @@ const Compras: React.FC = () => {
         </IonHeader>
         <IonContent className="compras-content">
           <div className="reporte-body">
-            <div className="reporte-aviso">
-              <IonIcon icon={alertCircleOutline} className="reporte-aviso-icon" />
-              <p>Ingresa los datos de tu transferencia. La verificación puede tardar hasta 24 horas hábiles.</p>
+
+            {/* Cuentas de referencia */}
+            <div className="rep-card">
+              <h3 className="rep-card-title">Cuentas bancarias</h3>
+              {CUENTAS.map(c => (
+                <div key={c.banco} className="rep-cuenta">
+                  <div className="rep-cuenta-head">
+                    <span className="rep-banco-nombre">{c.banco}</span>
+                    <span className="rep-cuenta-tipo">{c.tipo}</span>
+                  </div>
+                  <div className="rep-dato-fila">
+                    <div>
+                      <p className="rep-dato-lbl">Número de cuenta</p>
+                      <p className="rep-dato-val">{c.cuenta}</p>
+                    </div>
+                    <button className="rep-copy-btn"
+                      onClick={() => repCopiar(c.cuenta, `cta-${c.banco}`)}>
+                      <IonIcon icon={repCopiado === `cta-${c.banco}` ? checkmarkOutline : copyOutline} />
+                      <span>{repCopiado === `cta-${c.banco}` ? 'Copiado' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                  <div className="rep-dato-fila">
+                    <div>
+                      <p className="rep-dato-lbl">RUC beneficiario</p>
+                      <p className="rep-dato-val">{c.ruc}</p>
+                    </div>
+                    <button className="rep-copy-btn"
+                      onClick={() => repCopiar(c.ruc, `ruc-${c.banco}`)}>
+                      <IonIcon icon={repCopiado === `ruc-${c.banco}` ? checkmarkOutline : copyOutline} />
+                      <span>{repCopiado === `ruc-${c.banco}` ? 'Copiado' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <IonSelect
-              className="reporte-inp"
-              label="Banco de origen"
-              labelPlacement="floating"
-              fill="outline"
-              value={banco}
-              onIonChange={e => setBanco(e.detail.value)}>
-              {BANCOS.map(b => (
-                <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-              ))}
-            </IonSelect>
+            {/* Subir comprobante */}
+            <div className="rep-card">
+              <h3 className="rep-card-title">Comprobante de transferencia</h3>
 
-            <IonInput
-              className="reporte-inp"
-              label="Número de comprobante / referencia"
-              labelPlacement="floating"
-              fill="outline"
-              type="text"
-              value={codigo}
-              onIonInput={e => setCodigo(e.detail.value!)}
-            />
+              <input type="file" accept="image/*" ref={reporteInputRef}
+                style={{ display: 'none' }} onChange={handleRepImageChange} />
 
-            <IonButton expand="block" className="btn-confirmar-reporte"
-              onClick={enviarReporte} disabled={reportando || !banco || !codigo.trim()}>
-              {reportando
-                ? <><IonSpinner name="crescent" style={{ marginRight: 8 }} /> Enviando…</>
-                : 'Confirmar depósito'
-              }
-            </IonButton>
+              {repImagenLocal ? (
+                <div className="rep-preview">
+                  <img src={repImagenLocal} alt="Comprobante" className="rep-preview-img" />
+                  {!repAnalizando && (
+                    <button className="rep-change-btn"
+                      onClick={() => reporteInputRef.current?.click()}>
+                      Cambiar imagen
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="rep-upload-area"
+                  onClick={() => reporteInputRef.current?.click()}>
+                  <IonIcon icon={cameraOutline} className="rep-upload-icon" />
+                  <p className="rep-upload-texto">Toca para tomar foto o subir imagen</p>
+                  <p className="rep-upload-sub">Captura el comprobante de tu transferencia</p>
+                </div>
+              )}
+
+              {repAnalizando && (
+                <div className="rep-ocr-loading">
+                  <IonSpinner name="crescent" />
+                  <span>Analizando comprobante…</span>
+                </div>
+              )}
+
+              {repOcrError && !repAnalizando && (
+                <div className="rep-ocr-chip rep-ocr-chip-error">
+                  <IonIcon icon={closeCircleOutline} />
+                  <span>No se pudo leer el comprobante. Intenta con mejor iluminación.</span>
+                </div>
+              )}
+
+              {repOcr && !repAnalizando && (() => {
+                const repNumTx    = String(repOcr.numero_comprobante || repOcr.referencia || '').trim();
+                const repBancoOcr = String(repOcr.banco_emisor || repOcr.banco_receptor || '').trim();
+                const repMontoOCR = Number(repOcr.monto);
+                const repRegTotal = parseFloat(reporteTarget.current?.total_pago || '0');
+                const repMontoOk  = Number.isFinite(repMontoOCR) && Math.abs(repMontoOCR - repRegTotal) <= 0.05;
+                const repOcrOk    = String(repOcr.estado || '').toLowerCase() === 'aprobado';
+                return (
+                  <div className="rep-ocr-panel">
+                    <div className={`rep-ocr-estado ${repOcrOk ? 'rep-ocr-ok' : 'rep-ocr-warn'}`}>
+                      <IonIcon icon={repOcrOk ? checkmarkCircleOutline : alertCircleOutline} />
+                      <span>{repOcrOk ? 'Comprobante verificado' : 'Requiere revisión manual'}</span>
+                    </div>
+                    <div className="rep-ocr-datos">
+                      {repNumTx && (
+                        <div className="rep-ocr-dato">
+                          <span className="rep-ocr-lbl">N° Transacción</span>
+                          <span className="rep-ocr-val">{repNumTx}</span>
+                        </div>
+                      )}
+                      {repOcr.monto !== undefined && (
+                        <div className="rep-ocr-dato">
+                          <span className="rep-ocr-lbl">Monto detectado</span>
+                          <span className={`rep-ocr-val ${repMontoOk ? 'rep-ocr-monto-ok' : 'rep-ocr-monto-err'}`}>
+                            ${Number(repOcr.monto).toFixed(2)}{repMontoOk ? ' ✓' : ' — difiere del total'}
+                          </span>
+                        </div>
+                      )}
+                      {repBancoOcr && (
+                        <div className="rep-ocr-dato">
+                          <span className="rep-ocr-lbl">Banco</span>
+                          <span className="rep-ocr-val">{repBancoOcr}</span>
+                        </div>
+                      )}
+                      {repOcr.fecha && (
+                        <div className="rep-ocr-dato">
+                          <span className="rep-ocr-lbl">Fecha</span>
+                          <span className="rep-ocr-val">{repOcr.fecha}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Botones de acción */}
+            {(!repImagenUrl || repAnalizando) && (
+              <IonButton expand="block" className="btn-confirmar-reporte" disabled>
+                {repAnalizando
+                  ? <><IonSpinner name="crescent" style={{ marginRight: 8 }} />Analizando…</>
+                  : 'Confirmar transferencia'
+                }
+              </IonButton>
+            )}
+
+            {repImagenUrl && !repAnalizando && (() => {
+              const repNumTx    = String(repOcr?.numero_comprobante || repOcr?.referencia || '').trim();
+              const repMontoOCR = Number(repOcr?.monto);
+              const repRegTotal = parseFloat(reporteTarget.current?.total_pago || '0');
+              const repMontoOk  = Number.isFinite(repMontoOCR) && Math.abs(repMontoOCR - repRegTotal) <= 0.05;
+              const repOcrOk    = String(repOcr?.estado || '').toLowerCase() === 'aprobado';
+              const repNivel    = String(repOcr?.validacion?.nivel_sospecha || '').toLowerCase();
+              const repAdulter  = Boolean(repOcr?.validacion?.posible_adulteracion);
+              const esOCRFuerte = repOcr !== null && repOcrOk && repNivel === 'bajo' && !repAdulter && repMontoOk && repNumTx.length >= 4;
+              const tieneProblema = repOcrError || (repOcr !== null && !esOCRFuerte);
+
+              return esOCRFuerte ? (
+                <IonButton expand="block" className="btn-confirmar-reporte"
+                  onClick={() => enviarReporte(false)} disabled={reportando}>
+                  {reportando
+                    ? <><IonSpinner name="crescent" style={{ marginRight: 8 }} />Registrando…</>
+                    : 'Confirmar transferencia'
+                  }
+                </IonButton>
+              ) : tieneProblema ? (
+                <div className="rep-botones-alt">
+                  <IonButton expand="block" className="btn-confirmar-reporte"
+                    onClick={() => enviarReporte(true)} disabled={reportando}>
+                    {reportando
+                      ? <><IonSpinner name="crescent" style={{ marginRight: 8 }} />Enviando…</>
+                      : 'Enviar para revisión manual'
+                    }
+                  </IonButton>
+                  <IonButton expand="block" fill="outline" className="btn-rep-whatsapp"
+                    onClick={() => window.open('https://api.whatsapp.com/send?phone=593980009000', '_blank')}>
+                    <IonIcon icon={logoWhatsapp} slot="start" />
+                    Contactar por WhatsApp
+                  </IonButton>
+                </div>
+              ) : null;
+            })()}
+
           </div>
         </IonContent>
       </IonModal>

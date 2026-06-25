@@ -110,20 +110,38 @@ const Localidad: React.FC = () => {
   const tipo   = (st.tipo || 'correlativo').toLowerCase();
   const nombre = (st.nombre || '').replace(/__+/g, '').trim();
 
-  /* Carga la localidad */
-  useEffect(() => {
+  /* Carga la localidad. Con reconcile=true limpia de `sel` los asientos
+     que ya no están reservados por este usuario en la API (p.ej. orden anulada). */
+  const cargarLocalidad = (reconcile = false) => {
+    setCargando(true);
     axios
       .get(`https://api.t-ickets.com/mikroti/Boleteria/localidades/${id}/todo`, {
         headers: { Authorization: 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' },
       })
-      .then(({ data }) => { if (data.estado) setLocalidad(data.data); })
+      .then(({ data }) => {
+        if (data.estado) {
+          setLocalidad(data.data);
+          if (reconcile) {
+            const freshItems: SillaItem[] = data.data.items ?? [];
+            const ud = getUserData();
+            setSel(prev => prev.filter(s => {
+              const fresh = freshItems.find(fi => fi.idsilla === s.idsilla);
+              return fresh && fresh.estado !== 'disponible' && fresh.cedula === ud.cedula;
+            }));
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setCargando(false));
-  }, [id]);
+  };
 
-  /* Cuando el usuario vuelve desde Pago sin completar, resetear el flag */
+  /* Carga inicial */
+  useEffect(() => { cargarLocalidad(false); }, [id]); // eslint-disable-line
+
+  /* Al volver a la página: resetear flag de pago y recargar estado real de asientos */
   useIonViewWillEnter(() => {
     pagandoRef.current = false;
+    cargarLocalidad(true);
   });
 
   /* ── Liberar asientos al salir (a menos que el usuario vaya a pagar) ── */
@@ -227,7 +245,8 @@ const Localidad: React.FC = () => {
     try {
       await toggleSilla(item);
     } catch {
-      setToast('No se pudo procesar el asiento. Intenta de nuevo.');
+      setToast('Este asiento ya no está disponible. El mapa se ha actualizado.');
+      cargarLocalidad(true); // otro usuario tomó el asiento — refrescar mapa
     } finally {
       setProcesando(p => { const n = new Set(p); n.delete(item.idsilla); return n; });
     }

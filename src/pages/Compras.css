@@ -265,3 +265,187 @@
   height: 50px;
   margin-top: 6px;
 }
+
+/* ── Modal transferencia — cuentas y OCR ───────────────────── */
+.rep-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(15,52,96,0.07);
+}
+
+.rep-card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2d358c;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0 0 12px;
+}
+
+.rep-cuenta {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 10px;
+  margin-top: 8px;
+}
+.rep-cuenta:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+
+.rep-cuenta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.rep-banco-nombre { font-size: 0.85rem; font-weight: 700; color: #1a1e52; }
+.rep-cuenta-tipo  { font-size: 0.72rem; color: #9da5b4; }
+
+.rep-dato-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.rep-dato-lbl { font-size: 0.7rem; color: #9da5b4; margin: 0; }
+.rep-dato-val { font-size: 0.85rem; font-weight: 600; color: #1a1e52; margin: 0; }
+
+.rep-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0f2fb;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  color: #2d358c;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rep-copy-btn ion-icon { font-size: 0.85rem; }
+
+/* Upload area */
+.rep-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px dashed #c5ccee;
+  border-radius: 12px;
+  padding: 28px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.rep-upload-area:active { border-color: #2d358c; }
+.rep-upload-icon  { font-size: 2.2rem; color: #2d358c; }
+.rep-upload-texto { font-size: 0.87rem; font-weight: 600; color: #2d358c; margin: 0; text-align: center; }
+.rep-upload-sub   { font-size: 0.75rem; color: #9da5b4; margin: 0; text-align: center; }
+
+/* Preview */
+.rep-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rep-preview-img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; }
+.rep-change-btn {
+  font-size: 0.78rem; color: #2d358c; background: none;
+  border: none; text-decoration: underline; cursor: pointer;
+}
+
+/* OCR loading */
+.rep-ocr-loading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; color: #2d358c; font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+/* OCR chip error */
+.rep-ocr-chip { display: flex; align-items: center; gap: 6px; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; margin-top: 8px; }
+.rep-ocr-chip-error { background: #fdf0f0; color: #c0392b; }
+.rep-ocr-chip ion-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+/* OCR panel */
+.rep-ocr-panel { margin-top: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #e8eaf6; }
+.rep-ocr-estado {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; font-size: 0.82rem; font-weight: 600;
+}
+.rep-ocr-ok   { background: #eafaf1; color: #1d8348; }
+.rep-ocr-warn { background: #fef9e7; color: #9a7d0a; }
+.rep-ocr-estado ion-icon { font-size: 1.1rem; }
+
+.rep-ocr-datos { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.rep-ocr-dato  { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rep-ocr-lbl   { font-size: 0.72rem; color: #9da5b4; }
+.rep-ocr-val   { font-size: 0.82rem; font-weight: 600; color: #1a1e52; text-align: right; }
+.rep-ocr-monto-ok  { color: #1d8348; }
+.rep-ocr-monto-err { color: #c0392b; }
+
+/* Botones alternativos */
+.rep-botones-alt { display: flex; flex-direction: column; gap: 10px; }
+
+.btn-rep-whatsapp {
+  --border-color: #25d366;
+  --color: #25d366;
+  --border-radius: 12px;
+  font-weight: 700;
+  height: 48px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .compras-content  { --background: #101624; }
+
+  .compras-section-title { color: #6b7a90; }
+  .btn-hist         { --color: #7b8fdc; }
+
+  .comp-card {
+    background: #1a2035;
+    box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    border-left-color: #2a3050;
+  }
+  .comp-card-pendiente  { border-left-color: #f08121; }
+  .comp-nombre          { color: #e8ecf5; }
+  .comp-local           { color: #9da5b4; }
+  .comp-metodo          { color: #6b7a90; }
+  .comp-fecha           { color: #6b7a90; }
+  .comp-total           { color: #e8ecf5; }
+
+  .badge-reg-pagado    { --background: #0e2a18; --color: #4ade80; }
+  .badge-reg-pendiente { --background: #2a1e00; --color: #fcd34d; }
+  .badge-reg-comprobar { --background: #0e1e2a; --color: #60c8e8; }
+  .badge-reg-anulado   { --background: #1e2035; --color: #9da5b4; }
+  .badge-reg-expirado  { --background: #2a0e0e; --color: #f87171; }
+
+  .comp-empty         { color: #6b7a90; }
+  .comp-empty-icon    { color: #4ade80; }
+
+  .reporte-aviso {
+    background: #2a1e00;
+  }
+  .reporte-aviso p    { color: #d4a84b; }
+  .reporte-aviso-icon { color: #d4a84b; }
+
+  .reporte-inp {
+    --color: #e8ecf5;
+    --background: #222840;
+  }
+
+  .rep-card { background: #1a2035; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+  .rep-card-title     { color: #7b8fdc; }
+  .rep-cuenta         { border-top-color: #2a3050; }
+  .rep-banco-nombre   { color: #e8ecf5; }
+  .rep-dato-lbl       { color: #6b7a90; }
+  .rep-dato-val       { color: #e8ecf5; }
+  .rep-copy-btn       { background: #252d50; color: #7b8fdc; }
+
+  .rep-upload-area    { border-color: #3a4570; }
+  .rep-upload-icon    { color: #7b8fdc; }
+  .rep-upload-texto   { color: #7b8fdc; }
+  .rep-upload-sub     { color: #6b7a90; }
+  .rep-change-btn     { color: #7b8fdc; }
+  .rep-ocr-loading    { color: #7b8fdc; }
+  .rep-ocr-chip-error { background: #2a1010; color: #f87171; }
+  .rep-ocr-panel      { border-color: #2a3050; }
+  .rep-ocr-ok         { background: #0e2218; color: #4ade80; }
+  .rep-ocr-warn       { background: #1e1a00; color: #fcd34d; }
+  .rep-ocr-val        { color: #e8ecf5; }
+}

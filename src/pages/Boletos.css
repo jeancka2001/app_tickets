@@ -340,3 +340,58 @@
   color: #155724;
   border: 1px solid #c3e6cb;
 }
+
+@media (prefers-color-scheme: dark) {
+  .boletos-content  { --background: #101624; }
+  .modal-content    { --background: #101624; }
+
+  .cedula-input {
+    --color: #e8ecf5;
+    --background: #222840;
+  }
+
+  .loading-state    { color: #6b7a90; }
+  .loading-spinner  { color: #7b8fdc; }
+  .empty-state h3   { color: #e8ecf5; }
+  .empty-state p    { color: #6b7a90; }
+  .empty-icon       { color: #2a3050; }
+
+  .boleto-card {
+    background: #1a2035;
+    box-shadow: 0 3px 12px rgba(0,0,0,.4);
+  }
+  .boleto-concierto { color: #e8ecf5; }
+  .boleto-meta      { color: #9da5b4; }
+  .boleto-meta ion-icon { color: #7b8fdc; }
+
+  .badge-pagado   { --background: #0e2a18; --color: #4ade80; }
+  .badge-pendiente { --background: #2a1e00; --color: #fcd34d; }
+
+  .btn-descargar-card {
+    --color: #7b8fdc;
+    --border-color: #7b8fdc;
+  }
+
+  .qr-container {
+    background: #1a2035;
+    box-shadow: 0 3px 12px rgba(0,0,0,.4);
+  }
+  .qr-codigo {
+    color: #7b8fdc;
+    background: #1e2540;
+  }
+
+  .entrada-info-card {
+    background: #1a2035;
+    box-shadow: 0 3px 12px rgba(0,0,0,.4);
+  }
+  .entrada-titulo   { color: #e8ecf5; }
+  .entrada-fila     { border-bottom-color: #2a3050; }
+  .ei-icon          { color: #7b8fdc; }
+  .ei-label         { color: #6b7a90; }
+  .ei-valor         { color: #e8ecf5; }
+  .estado-pagado    { color: #4ade80; }
+
+  .canje-no { background: #2a0e0e; color: #f87171; border-color: #5a1a1a; }
+  .canje-si { background: #0e2a18; color: #4ade80; border-color: #1a5a30; }
+}

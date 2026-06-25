@@ -63,7 +63,7 @@ const getUserData = () => {
   catch { return {}; }
 };
 
-type Fase = 'seleccion' | 'deposito' | 'exito';
+type Fase = 'seleccion' | 'deposito' | 'bg' | 'exito';
 
 const Pago: React.FC = () => {
   const location = useLocation<PagoState>();
@@ -121,7 +121,7 @@ const Pago: React.FC = () => {
         id_usuario:  ud.id || ud.id_usuario || 0,
         cedula:      ud.cedula || '',
         email:       metodo === 'Deposito' ? 'pending.aprobacion@no-mail.local' : (ud.email || ''),
-        forma_pago:  metodo,
+        forma_pago: metodo === 'Banco Guayaquil' ? 'Efectivo' : metodo,
         concierto: [{
           nombreConcierto:     st.nombreEvento    || '',
           id_localidad:        st.idLocalidad,
@@ -151,12 +151,25 @@ const Pago: React.FC = () => {
 
       const { data } = await axios.post(`${URL_BASE}/registraCompra`, payload, { headers: API_HDR });
 
+      /* ── Banco Guayaquil: recaudación presencial ──────────────────────
+         Solo mostramos el código (cédula) con instrucciones. No abrimos
+         ninguna URL ni procesamos respuesta adicional. Si el backend
+         devuelve explícitamente success:false con mensaje, mostramos error. */
+      if (metodo === 'Banco Guayaquil') {
+        if (data?.success === false && data?.message) {
+          setError(data.message);
+        } else {
+          setFase('bg');
+        }
+        return;
+      }
+
       if (data.success || data.idRegistro) {
         setIdRegistro(data.idRegistro || data.id || 0);
         if (metodo === 'Deposito') {
           setFase('deposito');
         } else {
-          if (data.url) { setUrlPago(data.url); window.open(data.url, '_blank'); }
+          if (data.url) { setUrlPago(data.url); window.open(data.url, '_system'); }
           setFase('exito');
         }
       } else {
@@ -272,8 +285,9 @@ const Pago: React.FC = () => {
             </IonButtons>
           )}
           <IonTitle>
-            {fase === 'exito' ? 'Pago registrado'
+            {fase === 'exito'    ? 'Pago registrado'
               : fase === 'deposito' ? 'Realizar transferencia'
+              : fase === 'bg'       ? 'Código de pago'
               : 'Confirmar pago'}
           </IonTitle>
         </IonToolbar>
@@ -471,6 +485,84 @@ const Pago: React.FC = () => {
 
             <p className="pago-disclaimer">
               Tu pago será verificado y recibirás confirmación por correo electrónico.
+            </p>
+          </div>
+        )}
+
+        {/* ─── Efectivo / RECAUDACIÓN ─── */}
+        {fase === 'bg' && (
+          <div className="pago-container">
+
+            {/* Cabecera orden */}
+            <div className="bg-orden-header">
+              <p className="bg-orden-label">Orden generada correctamente</p>
+              <p className="bg-orden-sub">
+                ¡Estás a punto de finalizar tu compra en T-ickets!
+              </p>
+            </div>
+
+            {/* Card código */}
+            <div className="pago-card bg-codigo-card">
+              <div className="bg-servicio-bar">
+                <span className="bg-servicio-titulo">Servicio Recaudación</span>
+                <span className="bg-servicio-empresa">Empresa: Comnet · Speed · T-ickets</span>
+              </div>
+              <div className="bg-codigo-row">
+                <div className="bg-codigo-col">
+                  <span className="bg-col-label">CÓDIGO DE PAGO</span>
+                  <span className="bg-col-valor bg-codigo-val">{ud.cedula || '—'}</span>
+                </div>
+                <div className="bg-codigo-col">
+                  <span className="bg-col-label">MONTO A PAGAR</span>
+                  <span className="bg-col-valor bg-monto-val">${total.toFixed(2)}</span>
+                </div>
+              </div>
+              <button className="dep-copy-btn bg-copiar-btn"
+                onClick={() => copiar(ud.cedula || '', 'bg-code')}>
+                <IonIcon icon={copiado === 'bg-code' ? checkmarkOutline : copyOutline} />
+                <span>{copiado === 'bg-code' ? 'Código copiado' : 'Copiar código'}</span>
+              </button>
+            </div>
+
+            {/* Instrucciones */}
+            <div className="pago-card">
+              <h3 className="pago-card-title">Cómo realizar el pago</h3>
+              <ol className="bg-pasos">
+                <li className="bg-paso">
+                  Dirígete a un punto de pago: <strong>Banco del Barrio, Banco Guayaquil, BienMovil, Facilito</strong> o cualquier red de recaudación.
+                </li>
+                <li className="bg-paso">
+                  Indica que vas a realizar un pago a la empresa: <strong>COMNET - SPEED</strong>
+                </li>
+                <li className="bg-paso">
+                  Proporciona tu número de cédula <strong>{ud.cedula}</strong> como código de pago.
+                </li>
+                <li className="bg-paso">
+                  Cancela el valor de <strong>${total.toFixed(2)}</strong>
+                </li>
+                <li className="bg-paso">
+                  Una vez realizado el pago, tus boletos llegarán al correo <strong>{ud.email}</strong>
+                </li>
+              </ol>
+            </div>
+
+            {/* Canales disponibles */}
+            <div className="pago-card">
+              <h3 className="pago-card-title">Canales disponibles</h3>
+              <div className="bg-canales">
+                {['Banco del Barrio', 'Banco Guayaquil App', 'BienMovil', 'Mi Comisariato', 'Facilito', 'Farmacias'].map(c => (
+                  <span key={c} className="bg-canal-chip">{c}</span>
+                ))}
+              </div>
+            </div>
+
+            <IonButton expand="block" className="btn-confirmar"
+              onClick={() => history.replace('/dashboard/compras')}>
+              Ver mis compras
+            </IonButton>
+
+            <p className="pago-disclaimer">
+              Tu orden quedará activa por 24 horas. Luego del pago, tus boletos se activarán automáticamente.
             </p>
           </div>
         )}

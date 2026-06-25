@@ -29,6 +29,7 @@ import {
   downloadOutline,
 } from 'ionicons/icons';
 import axios from 'axios';
+import marcaTickets from '../images/MARCA_TICKETS.png';
 import './Boletos.css';
 
 interface Asiento {
@@ -198,9 +199,13 @@ const Boletos: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="boletos-toolbar">
+          <IonButtons slot="start">
+            <img src={marcaTickets} alt="T-ickets" className="toolbar-logo" />
+          </IonButtons>
           <IonTitle>Mis Boletos</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => cargarTickets()} disabled={cargando} className="btn-recargar">
+            <IonButton onClick={() => cargarTickets()} disabled={cargando}
+              className={`btn-recargar ${cargando ? 'btn-cargando' : ''}`}>
               <IonIcon icon={refreshOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
@@ -208,6 +213,9 @@ const Boletos: React.FC = () => {
       </IonHeader>
 
       <IonContent className="boletos-content">
+        <div aria-hidden="true" className="page-watermark">
+          <img src={marcaTickets} alt="" />
+        </div>
 
         {/* Busqueda por cedula si no se obtuvo automaticamente */}
         {!getCedulaGuardada() && (
@@ -365,6 +373,7 @@ const Boletos: React.FC = () => {
                       <span className="ei-label">Valor</span>
                       <span className="ei-valor">${ticketSeleccionado.valor}</span>
                     </div>
+                    
                   </div>
 
                   <div className="entrada-fila">

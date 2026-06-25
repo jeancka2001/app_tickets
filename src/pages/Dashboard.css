@@ -28,3 +28,12 @@
   border-radius: 8px;
   line-height: 16px;
 }
+
+@media (prefers-color-scheme: dark) {
+  .main-tab-bar {
+    --background: #1a2035;
+    --color: #6b7a90;
+    --color-selected: #7b8fdc;
+    border-top-color: #2a3050;
+  }
+}

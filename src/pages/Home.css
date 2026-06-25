@@ -83,3 +83,18 @@
   --padding-start: 6px;
   --padding-end: 6px;
 }
+
+@media (prefers-color-scheme: dark) {
+  .form-card {
+    background: #1a2035;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .form-title { color: #e8ecf5; }
+  .login-input {
+    --color: #e8ecf5;
+    --placeholder-color: #6b7a90;
+    --background: #222840;
+  }
+  .register-text { color: #9da5b4; }
+  .btn-crear { --color: #7b8fdc; }
+}
