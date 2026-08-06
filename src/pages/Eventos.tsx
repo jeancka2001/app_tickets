@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -24,6 +24,8 @@ import {
   chevronForwardOutline,
   alertCircleOutline,
   timeOutline,
+  refreshOutline,
+  expandOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
@@ -63,6 +65,82 @@ const formatFecha = (fecha: string) => {
   return `${d} ${MESES[parseInt(m) - 1]} ${y}`;
 }; 
 
+const MapaViewer: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapRef      = useRef<HTMLDivElement>(null);
+  const scale        = useRef(1);
+  const lastDist     = useRef(0);
+  const offset       = useRef({ x: 0, y: 0 });
+  const lastTouch    = useRef({ x: 0, y: 0 });
+  const lastTap      = useRef(0);
+
+  const apply = () => {
+    if (wrapRef.current)
+      wrapRef.current.style.transform =
+        `translate(${offset.current.x}px, ${offset.current.y}px) scale(${scale.current})`;
+  };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const dist = (t: TouchList) => Math.hypot(
+      t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY
+    );
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        lastDist.current = dist(e.touches);
+      } else {
+        lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        const now = Date.now();
+        if (now - lastTap.current < 300) {
+          scale.current = scale.current > 1 ? 1 : 2.5;
+          offset.current = { x: 0, y: 0 };
+          apply();
+        }
+        lastTap.current = now;
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        const d = dist(e.touches);
+        scale.current = Math.min(Math.max(scale.current * (d / lastDist.current), 1), 6);
+        lastDist.current = d;
+      } else if (e.touches.length === 1 && scale.current > 1) {
+        offset.current.x += e.touches[0].clientX - lastTouch.current.x;
+        offset.current.y += e.touches[0].clientY - lastTouch.current.y;
+        lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      apply();
+    };
+    const onEnd = () => {
+      if (scale.current < 1) { scale.current = 1; offset.current = { x: 0, y: 0 }; apply(); }
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, []);
+
+  return (
+    <div className="mapa-viewer-overlay" onClick={onClose}>
+      <button className="mapa-viewer-close" onClick={onClose}>
+        <IonIcon icon={closeOutline} />
+      </button>
+      <p className="mapa-viewer-hint">Pellizca para hacer zoom · Doble toque para ajustar</p>
+      <div ref={containerRef} className="mapa-viewer-container" onClick={e => e.stopPropagation()}>
+        <div ref={wrapRef} className="mapa-viewer-wrap">
+          <img src={src} alt="Mapa del evento" className="mapa-viewer-img" draggable={false} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Eventos: React.FC = () => {
   const history = useHistory();
   const { pendientesCount } = usePendientes();
@@ -79,26 +157,33 @@ const Eventos: React.FC = () => {
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const [alertPendiente, setAlertPendiente] = useState(false);
+  const [verMapa, setVerMapa] = useState(false);
 
-  useEffect(() => {
-    const cargarEventos = async () => {
-      try {
-        const hdrs = { headers: { 'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' } };
-        const [resActivo, resProximo] = await Promise.all([
-          axios.get('https://api.t-ickets.com/ms_login/listareventos/ACTIVO/', hdrs),
-          axios.get('https://api.t-ickets.com/ms_login/listareventos/PROXIMO/', hdrs),
-        ]);
-        if (resActivo.data.success) setEventos(resActivo.data.data);
-        else setError('No se pudieron cargar los eventos');
-        if (resProximo.data.success) setEventosProximos(resProximo.data.data ?? []);
-      } catch {
-        setError('Error al conectar con el servidor');
-      } finally {
-        setCargando(false);
-      }
-    };
-    cargarEventos();
-  }, []);
+  const cargarEventos = async () => {
+    setCargando(true);
+    setError('');
+    try {
+      const hdrs = { headers: { 'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' } };
+      const [resActivo, resProximo] = await Promise.all([
+        axios.get('https://api.t-ickets.com/ms_login/listareventos/ACTIVO/', hdrs),
+        axios.get('https://api.t-ickets.com/ms_login/listareventos/PROXIMO/', hdrs),
+      ]);
+      if (resActivo.data.success) {
+        const hoy = new Date();
+        const soloFuturos = (resActivo.data.data as Evento[]).filter(ev => {
+          return new Date(ev.fechaConcierto + 'T23:59:59') > hoy;
+        });
+        setEventos(soloFuturos);
+      } else setError('No se pudieron cargar los eventos');
+      if (resProximo.data.success) setEventosProximos(resProximo.data.data ?? []);
+    } catch {
+      setError('Error al conectar con el servidor');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => { cargarEventos(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirPrecios = async (evento: Evento) => {
     setEventoSeleccionado(evento);
@@ -175,6 +260,11 @@ const Eventos: React.FC = () => {
             <img src={marcaTickets} alt="T-ickets" className="toolbar-logo" />
           </IonButtons>
           <IonTitle>Eventos</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={cargarEventos} disabled={cargando} className="btn-recargar-eventos">
+              <IonIcon icon={refreshOutline} slot="icon-only" />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
         <IonToolbar className="search-toolbar">
           <IonSearchbar
@@ -309,7 +399,7 @@ const Eventos: React.FC = () => {
               <>
                 <div className="modal-evento-banner">
                   <img
-                    src={eventoSeleccionado.imagenConcierto}
+                    src={eventoSeleccionado.mapaConcierto}
                     alt={eventoSeleccionado.nombreConcierto}
                     className="modal-evento-img"
                   />
@@ -322,6 +412,10 @@ const Eventos: React.FC = () => {
                       {eventoSeleccionado.lugarConcierto}, {eventoSeleccionado.cuidadConcert}
                     </p>
                   </div>
+                  <button className="btn-ver-mapa" onClick={() => setVerMapa(true)}>
+                    <IonIcon icon={expandOutline} />
+                    Ver mapa
+                  </button>
                 </div>
 
                 <div className="precios-lista">
@@ -398,6 +492,13 @@ const Eventos: React.FC = () => {
         ]}
         onDidDismiss={() => setAlertPendiente(false)}
       />
+
+      {verMapa && eventoSeleccionado && (
+        <MapaViewer
+          src={eventoSeleccionado.mapaConcierto}
+          onClose={() => setVerMapa(false)}
+        />
+      )}
 
     </IonPage>
   );

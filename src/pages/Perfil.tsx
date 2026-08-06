@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonIcon, IonButton, IonButtons, IonItem, IonLabel,
-  IonModal, IonInput, IonSpinner, IonToast,
+  IonModal, IonInput, IonSpinner, IonToast, IonAlert,
 } from '@ionic/react';
 import {
   mailOutline, callOutline, cardOutline,
@@ -31,6 +31,9 @@ const Perfil: React.FC = () => {
   const history = useHistory();
   const [user, setUser]     = useState<UserData>(getUserData);
   const inicial             = user?.nombreCompleto?.charAt(0) ?? '?';
+
+  /* ── Alert cerrar sesión ── */
+  const [alertLogout, setAlertLogout] = useState(false);
 
   /* ── Modal editar ── */
   const [modalEdit, setModalEdit] = useState(false);
@@ -173,13 +176,24 @@ const Perfil: React.FC = () => {
         </div>
 
         <div className="perfil-logout">
-          <IonButton expand="block" className="btn-logout" onClick={cerrarSesion}>
+          <IonButton expand="block" className="btn-logout" onClick={() => setAlertLogout(true)}>
             <IonIcon icon={logOutOutline} slot="start" />
             Cerrar Sesión
           </IonButton>
         </div>
 
       </IonContent>
+
+      <IonAlert
+        isOpen={alertLogout}
+        header="Cerrar sesión"
+        message="¿Estás seguro de que deseas cerrar sesión?"
+        buttons={[
+          { text: 'Cancelar', role: 'cancel' },
+          { text: 'Sí, salir', role: 'confirm', handler: cerrarSesion },
+        ]}
+        onDidDismiss={() => setAlertLogout(false)}
+      />
 
       {/* ── Modal editar correo y teléfono ── */}
       <IonModal isOpen={modalEdit} onDidDismiss={() => setModalEdit(false)}
@@ -197,7 +211,7 @@ const Perfil: React.FC = () => {
 
             <div className="edit-aviso">
               <IonIcon icon={alertCircleOutline} className="edit-aviso-icon" />
-              <p>Puedes actualizar tu correo electrónico y número de teléfono.</p>
+              <p>Puedes actualizar tu correo electrónico (preferiblemente gmail) y número de teléfono.</p>
             </div>
 
             <IonInput
