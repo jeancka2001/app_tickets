@@ -12,6 +12,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import marcaTickets from '../images/MARCA_TICKETS.png';
+import { eliminarCredencialesBiometricas } from '../utils/biometricAuth';
 import './Perfil.css';
 
 interface UserData {
@@ -93,7 +94,7 @@ const Perfil: React.FC = () => {
 
   const cerrarSesion = () => {
     localStorage.removeItem('userData');
-    localStorage.removeItem('sesion');
+    eliminarCredencialesBiometricas();
     history.replace('/home');
   };
 

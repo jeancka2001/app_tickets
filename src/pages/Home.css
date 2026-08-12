@@ -50,6 +50,32 @@
   margin-bottom: 16px;
 }
 
+.login-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #4a5468;
+  margin: 4px 2px 4px;
+  --checkbox-background-checked: #2d358c;
+  --border-color-checked: #2d358c;
+}
+
+.btn-huella {
+  --border-radius: 10px;
+  --border-color: #2d358c;
+  --color: #2d358c;
+  font-weight: 600;
+  height: 46px;
+  margin-bottom: 18px;
+}
+
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+}
+
 .btn-login {
   --background: #2d358c;
   --background-activated: #1a1e52;
@@ -97,4 +123,6 @@
   }
   .register-text { color: #9da5b4; }
   .btn-crear { --color: #7b8fdc; }
+  .login-checkbox { color: #9da5b4; }
+  .btn-huella { --border-color: #7b8fdc; --color: #7b8fdc; }
 }

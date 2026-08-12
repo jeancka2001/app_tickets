@@ -9,6 +9,9 @@ import Dashboard from './pages/Dashboard';
 import Localidad from './pages/Localidad';
 import Pago from './pages/Pago';
 import { PendientesProvider } from './context/PendientesContext';
+import { AppLockProvider } from './context/AppLockContext';
+import LockScreen from './components/LockScreen';
+import { inicializarNotificaciones } from './utils/pushNotifications';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -46,7 +49,27 @@ const CapacitorUrlHandler: React.FC = () => {
   useEffect(() => {
     const parseCode = (url: string): string | null => {
       try {
-        const m = new URL(url).pathname.match(/\/evento\/([A-Z0-9]+)/i);
+        const u = new URL(url);
+
+        /* Deep link propio (mientras no haya Android App Links verificados):
+           ectickets://CODIGO  o  ectickets://evento/CODIGO */
+        if (u.protocol === 'ectickets:') {
+          const host     = (u.hostname || '').trim();
+          const pathCode = u.pathname.replace(/^\/+/, '').trim();
+          const raw = host.toLowerCase() === 'evento' && pathCode ? pathCode : (host || pathCode);
+          return /^[A-Z0-9]+$/i.test(raw) ? raw.toUpperCase() : null;
+        }
+
+        /* Formato real compartido por la web: https://www.tickets.com.ec/#CODIGO */
+        const fromHash = u.hash.replace('#', '').trim();
+        if (/^[A-Z0-9]+$/i.test(fromHash)) return fromHash.toUpperCase();
+
+        /* Alternativa usada también por la web: ?evento=CODIGO */
+        const fromQuery = u.searchParams.get('evento');
+        if (fromQuery) return fromQuery.toUpperCase();
+
+        /* Compatibilidad con un eventual /evento/CODIGO */
+        const m = u.pathname.match(/\/evento\/([A-Z0-9]+)/i);
         return m?.[1]?.toUpperCase() ?? null;
       } catch { return null; }
     };
@@ -66,23 +89,36 @@ const CapacitorUrlHandler: React.FC = () => {
 };
 
 /* ── App principal ── */
-const App: React.FC = () => (
+const App: React.FC = () => {
+  useEffect(() => {
+    /* Usuario que reabre la app ya logueado: registra el dispositivo en FCM
+       sin esperar a que pase de nuevo por el login. */
+    if (localStorage.getItem('userData')) inicializarNotificaciones();
+  }, []);
+
+  return (
   <IonApp>
-    <PendientesProvider>
-      <IonReactRouter>
-        <CapacitorUrlHandler />
-        <IonRouterOutlet>
-          <Route exact path="/home"><Home /></Route>
-          <Route exact path="/register"><Register /></Route>
-          <Route path="/dashboard" render={() => <Dashboard />} />
-          <Route path="/localidad/:id" component={Localidad} />
-          <Route path="/pago" component={Pago} />
-          <Route path="/evento/:codigo" component={EventoDeepLink} />
-          <Route exact path="/"><Redirect to="/home" /></Route>
-        </IonRouterOutlet>
-      </IonReactRouter>
-    </PendientesProvider>
+    <AppLockProvider>
+      <PendientesProvider>
+        <IonReactRouter>
+          <CapacitorUrlHandler />
+          <IonRouterOutlet>
+            <Route exact path="/home"><Home /></Route>
+            <Route exact path="/register"><Register /></Route>
+            <Route path="/dashboard" render={() => <Dashboard />} />
+            <Route path="/localidad/:id" component={Localidad} />
+            <Route path="/pago" component={Pago} />
+            <Route path="/evento/:codigo" component={EventoDeepLink} />
+            <Route exact path="/">
+              <Redirect to={localStorage.getItem('userData') ? '/dashboard' : '/home'} />
+            </Route>
+          </IonRouterOutlet>
+        </IonReactRouter>
+      </PendientesProvider>
+      <LockScreen />
+    </AppLockProvider>
   </IonApp>
-);
+  );
+};
 
 export default App;

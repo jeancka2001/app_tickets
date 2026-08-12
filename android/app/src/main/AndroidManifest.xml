@@ -22,6 +22,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep link propio: ectickets://CODIGO abre el evento (visible u oculto) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ectickets" />
+            </intent-filter>
+
+            <!-- Links reales de tickets.com.ec: SIN android:autoVerify porque no hay
+                 assetlinks.json publicado todavía. Sin verificar, Android ofrece un
+                 diálogo "Abrir con: app / navegador" cuando la app está instalada
+                 (o abre la app directo si el usuario eligió "Siempre" antes), y abre
+                 el navegador sin errores si la app no está instalada. Apps con
+                 navegador embebido (WhatsApp, Instagram, Gmail...) suelen ignorar
+                 intent-filters no verificados y abren su propio navegador interno;
+                 eso solo se resuelve publicando assetlinks.json y agregando
+                 android:autoVerify="true" más adelante. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.tickets.com.ec" />
+                <data android:scheme="https" android:host="tickets.com.ec" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -38,4 +63,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notificaciones push (obligatorio pedirlo en tiempo de ejecución desde Android 13) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

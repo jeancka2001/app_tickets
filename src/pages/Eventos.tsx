@@ -14,6 +14,7 @@ import {
   IonModal,
   IonBadge,
   IonAlert,
+  IonToast,
 } from '@ionic/react';
 import {
   locationOutline,
@@ -159,6 +160,9 @@ const Eventos: React.FC = () => {
   const [alertPendiente, setAlertPendiente] = useState(false);
   const [verMapa, setVerMapa] = useState(false);
 
+  const [avisoLink, setAvisoLink] = useState('');
+  const resolviendoLinkRef = useRef(false);
+
   const cargarEventos = async () => {
     setCargando(true);
     setError('');
@@ -234,18 +238,44 @@ const Eventos: React.FC = () => {
     });
   };
 
-  /* Abre automáticamente el evento si viene de un deep link */
+  /* Abre automáticamente el evento si viene de un deep link.
+     Si el código no está en el listado público (evento oculto / "en proceso",
+     visible solo por link — igual que en la web), se busca puntualmente
+     con evento_por_codigo antes de darlo por no encontrado. */
   useEffect(() => {
-    if (cargando || eventos.length === 0) return;
+    if (cargando) return;
     const code = sessionStorage.getItem('pendingEventCode');
-    if (!code) return;
-    const ev = eventos.find(e => e.codigoEvento === code);
-    if (ev) {
+    if (!code || resolviendoLinkRef.current) return;
+
+    const local = eventos.find(e => e.codigoEvento === code)
+      ?? eventosProximos.find(e => e.codigoEvento === code);
+
+    if (local) {
       sessionStorage.removeItem('pendingEventCode');
-      abrirPrecios(ev);
+      abrirPrecios(local);
+      return;
     }
+
+    resolviendoLinkRef.current = true;
+    axios
+      .get(`https://api.t-ickets.com/ms_login/evento_por_codigo/${code}`, {
+        headers: { Authorization: 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' },
+      })
+      .then(({ data }) => {
+        sessionStorage.removeItem('pendingEventCode');
+        if (data.success && data.data) {
+          abrirPrecios(data.data as Evento);
+        } else {
+          setAvisoLink('El evento del enlace ya no está disponible.');
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem('pendingEventCode');
+        setAvisoLink('No se pudo cargar el evento del enlace.');
+      })
+      .finally(() => { resolviendoLinkRef.current = false; });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cargando, eventos]);
+  }, [cargando, eventos, eventosProximos]);
 
   const eventosFiltrados = eventos.filter((ev) =>
     ev.nombreConcierto.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -491,6 +521,15 @@ const Eventos: React.FC = () => {
           },
         ]}
         onDidDismiss={() => setAlertPendiente(false)}
+      />
+
+      <IonToast
+        isOpen={!!avisoLink}
+        message={avisoLink}
+        duration={3500}
+        color="danger"
+        position="top"
+        onDidDismiss={() => setAvisoLink('')}
       />
 
       {verMapa && eventoSeleccionado && (
