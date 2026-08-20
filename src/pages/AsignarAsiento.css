@@ -1,0 +1,179 @@
+.asig-toolbar {
+  --background: #311C7C;
+  --color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.asig-logo {
+  height: 32px;
+  margin: 0 12px;
+}
+
+.asig-content {
+  --background: #f4f5f7;
+}
+
+.asig-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  text-align: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+.asig-error-icon {
+  font-size: 3rem;
+  color: #dc3545;
+}
+
+.asig-exito-icon {
+  font-size: 3rem;
+  color: #198754;
+}
+
+.asig-sub {
+  color: #6b7a90;
+  font-size: 0.85rem;
+  margin: 2px 0 8px;
+}
+
+.asig-container {
+  padding: 16px;
+}
+
+.asig-banner {
+  position: relative;
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffe69c;
+  border-radius: 12px;
+  padding: 12px 28px 12px 14px;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+}
+
+.asig-banner p { margin: 2px 0; }
+
+.asig-banner-cerrar {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #664d03;
+}
+
+.asig-header-loc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.asig-header-loc h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #311C7C;
+  margin: 0;
+}
+
+.asig-mapa {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 8px;
+  margin-top: 12px;
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.asig-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+}
+
+.asig-fila-badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #311C7C;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  position: sticky;
+  left: 0;
+}
+
+.asig-fila-asientos {
+  display: flex;
+  flex-grow: 1;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+
+.asig-silla {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  color: #fff;
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asig-silla:disabled {
+  opacity: 0.85;
+}
+
+.asig-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: #4a5468;
+}
+
+.asig-leyenda span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.asig-leyenda i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.asig-acciones {
+  margin-top: 20px;
+}
+
+.asig-modal-body {
+  padding: 24px;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .asig-content { --background: #10131f; }
+  .asig-mapa { background: #1a2035; }
+  .asig-header-loc h2 { color: #b9a9f2; }
+  .asig-leyenda { color: #9da5b4; }
+}

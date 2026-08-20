@@ -133,7 +133,7 @@
 }
 .fila-tag span  { font-size: 0.7rem; font-weight: 800; color: #2d358c; }
 .fila-tag small { font-size: 0.55rem; color: #27ae60; font-weight: 600; }
-.seats-inline { display: flex; flex-wrap: wrap; gap: 3px; }
+.seats-inline { display: flex; flex-grow: 1; flex-wrap: wrap; gap: 3px; }
 
 /* ── VISTA MESA ───────────────────────────────────────────── */
 .mesa-map { display: flex; flex-direction: column; gap: 14px; }

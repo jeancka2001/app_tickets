@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   IonContent,
   IonHeader,
@@ -15,6 +16,7 @@ import {
   IonBadge,
   IonAlert,
   IonToast,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   locationOutline,
@@ -31,6 +33,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import marcaTickets from '../images/MARCA_TICKETS.png';
 import './Eventos.css';
 
@@ -127,7 +130,12 @@ const MapaViewer: React.FC<{ src: string; onClose: () => void }> = ({ src, onClo
     };
   }, []);
 
-  return (
+  /* Portal directo a document.body: IonModal maneja su propio apilamiento
+     interno que puede quedar por encima de overlays normales de React sin
+     importar el z-index, así que esta ventana (abierta desde DENTRO del
+     modal de localidades) necesita escapar a ese apilamiento para
+     garantizar que quede visible encima de todo. */
+  return createPortal(
     <div className="mapa-viewer-overlay" onClick={onClose}>
       <button className="mapa-viewer-close" onClick={onClose}>
         <IonIcon icon={closeOutline} />
@@ -138,7 +146,8 @@ const MapaViewer: React.FC<{ src: string; onClose: () => void }> = ({ src, onClo
           <img src={src} alt="Mapa del evento" className="mapa-viewer-img" draggable={false} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -163,11 +172,25 @@ const Eventos: React.FC = () => {
   const [avisoLink, setAvisoLink] = useState('');
   const resolviendoLinkRef = useRef(false);
 
+  /* Evento cuyo modal de localidades hay que reabrir al volver de
+     /localidad/:id (botón atrás) — IonModal flota por encima de todo,
+     así que no se puede dejar "abierto" durante la navegación; se cierra
+     bien y se reabre solo al reaparecer esta pestaña. */
+  const reabrirEventoRef = useRef<Evento | null>(null);
+
+  useIonViewWillEnter(() => {
+    if (reabrirEventoRef.current) {
+      const ev = reabrirEventoRef.current;
+      reabrirEventoRef.current = null;
+      abrirPrecios(ev);
+    }
+  });
+
   const cargarEventos = async () => {
     setCargando(true);
     setError('');
     try {
-      const hdrs = { headers: { 'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' } };
+      const hdrs = { headers: MS_LOGIN_AUTH_HEADERS };
       const [resActivo, resProximo] = await Promise.all([
         axios.get('https://api.t-ickets.com/ms_login/listareventos/ACTIVO/', hdrs),
         axios.get('https://api.t-ickets.com/ms_login/listareventos/PROXIMO/', hdrs),
@@ -198,9 +221,7 @@ const Eventos: React.FC = () => {
       const { data } = await axios.get(
         `https://api.t-ickets.com/ms_login/ListaPreciosLocaDispo/${evento.codigoEvento}`,
         {
-          headers: {
-            'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
-          },
+          headers: MS_LOGIN_AUTH_HEADERS,
         }
       );
       if (data.success) {
@@ -224,6 +245,11 @@ const Eventos: React.FC = () => {
       setAlertPendiente(true);
       return;
     }
+    /* Se guarda el evento para reabrir su modal de localidades al volver
+       (ver useIonViewWillEnter arriba) — el modal en sí se cierra, porque
+       al ser un overlay queda flotando encima de cualquier página nueva
+       si no se cierra. */
+    reabrirEventoRef.current = eventoSeleccionado;
     cerrarModal();
     history.push(`/localidad/${precio.id_localidad}`, {
       nombre:          precio.localidad,
@@ -259,7 +285,7 @@ const Eventos: React.FC = () => {
     resolviendoLinkRef.current = true;
     axios
       .get(`https://api.t-ickets.com/ms_login/evento_por_codigo/${code}`, {
-        headers: { Authorization: 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' },
+        headers: MS_LOGIN_AUTH_HEADERS,
       })
       .then(({ data }) => {
         sessionStorage.removeItem('pendingEventCode');

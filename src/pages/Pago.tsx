@@ -10,6 +10,7 @@ import {
   closeCircleOutline, logoWhatsapp,
 } from 'ionicons/icons';
 import axios from 'axios';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Pago.css';
 
 interface PagoState {
@@ -41,7 +42,7 @@ interface OcrExtracto {
 }
 
 const API_HDR = {
-  'authorization-ticket': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+  ...MS_LOGIN_AUTH_HEADERS,
   'Content-Type': 'application/json',
 };
 const URL_BASE = 'https://api.t-ickets.com/ms_login/api/v1';

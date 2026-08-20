@@ -13,6 +13,7 @@ import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import marcaTickets from '../images/MARCA_TICKETS.png';
 import { eliminarCredencialesBiometricas } from '../utils/biometricAuth';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Perfil.css';
 
 interface UserData {
@@ -62,7 +63,7 @@ const Perfil: React.FC = () => {
     setGuardando(true);
     try {
       const { data } = await axios.post(
-        'https://api.ticketsecuador.ec/ms_login/api/v1/crear_suscriptor',
+        'https://api.t-ickets.com/ms_login/api/v1/crear_suscriptor',
         {
           nombreCompleto: user.nombreCompleto,
           email,
@@ -71,7 +72,7 @@ const Perfil: React.FC = () => {
           ciudad: user.ciudad ?? '',
           cedula: user.cedula,
         },
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { 'Content-Type': 'application/json', ...MS_LOGIN_AUTH_HEADERS } }
       );
       if (data.success) {
         const updated = { ...user, email, movil };

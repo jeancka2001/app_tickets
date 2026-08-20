@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
-  IonButtons, IonBackButton, IonIcon, IonButton, IonSpinner,
+  IonButtons, IonIcon, IonButton, IonSpinner, IonAlert,
   IonText, IonToast, useIonViewWillLeave, useIonViewWillEnter,
 } from '@ionic/react';
 import { useParams, useLocation, useHistory } from 'react-router-dom';
-import { addOutline, removeOutline, cartOutline } from 'ionicons/icons';
+import { addOutline, removeOutline, cartOutline, chevronBackOutline } from 'ionicons/icons';
 import axios from 'axios';
+import { obtenerConfiguracionLocalidad, obtenerMapaLocalidad, claseAlineacion, enOrdenVisual } from '../utils/localidadConfig';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Localidad.css';
 
 const MAX_SEL = 10;
 
 const API_HDR = {
-  'authorization-ticket': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+  ...MS_LOGIN_AUTH_HEADERS,
   'Content-Type': 'application/json',
 };
 
@@ -96,47 +98,118 @@ const Localidad: React.FC = () => {
   const [zoom, setZoom]           = useState(0.7);
   const [procesando, setProcesando] = useState<Set<number>>(new Set());
   const [toast, setToast]         = useState('');
+  const [confirmarSalir, setConfirmarSalir] = useState(false);
+  const [alineacionFilas, setAlineacionFilas] = useState<Record<string, string>>({});
+  const [ordenSillasFilas, setOrdenSillasFilas] = useState<Record<string, boolean>>({});
+  const [idEspacio, setIdEspacio] = useState<number | null>(null);
 
   /* refs para closures en useIonViewWillLeave */
   const selRef        = useRef<SillaItem[]>([]);
   const cantRef       = useRef(1);
   const corrActivoRef = useRef(false);
   const pagandoRef    = useRef(false);      // si el usuario va a pagar, NO liberar
+  const idEspacioRef  = useRef<number | null>(null);
 
   useEffect(() => { selRef.current   = sel;      }, [sel]);
   useEffect(() => { cantRef.current  = cantidad; }, [cantidad]);
+  useEffect(() => { idEspacioRef.current = idEspacio; }, [idEspacio]);
 
   const precio = parseFloat(st.precio || '0');
   const tipo   = (st.tipo || 'correlativo').toLowerCase();
   const nombre = (st.nombre || '').replace(/__+/g, '').trim();
 
+  /* ── Salir de la pantalla (botón de la barra o atrás físico/gesto) ──
+     Si hay algo reservado, confirma antes de descartarlo — useIonViewWillLeave
+     ya se encarga de liberar los asientos en el servidor una vez se confirma. */
+  const haySeleccionActiva = () =>
+    tipo === 'correlativo' ? corrActivoRef.current : selRef.current.length > 0;
+
+  const intentarSalir = () => {
+    if (haySeleccionActiva()) setConfirmarSalir(true);
+    else history.goBack();
+  };
+
+  /* Intercepta el botón físico/gesto de "atrás" de Android solo mientras
+     esta pantalla está montada, con la misma confirmación que el botón
+     de la barra — sin esto, el gesto nativo se saltaba la confirmación. */
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      (ev as CustomEvent<{ register: (priority: number, cb: () => void) => void }>)
+        .detail.register(10, intentarSalir);
+    };
+    document.addEventListener('ionBackButton', handler);
+    return () => document.removeEventListener('ionBackButton', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* Carga la localidad. Con reconcile=true limpia de `sel` los asientos
-     que ya no están reservados por este usuario en la API (p.ej. orden anulada). */
+     que ya no están reservados por este usuario en la API (p.ej. orden anulada).
+
+     Correlativo (sin mapa de sillas individuales) sigue usando el endpoint
+     viejo, que da directo el resumen de disponibilidad. Fila/mesa usan el
+     mismo endpoint que la web (necesita id_espacio, por eso espera a que
+     esté disponible) — el viejo "mikroti/Boleteria/.../todo" devolvía
+     asientos que ya se habían borrado en la base de datos. */
   const cargarLocalidad = (reconcile = false) => {
+    const esCorrelativo = tipo === 'correlativo';
+    if (!esCorrelativo && idEspacioRef.current == null) return;
+
     setCargando(true);
-    axios
-      .get(`https://api.t-ickets.com/mikroti/Boleteria/localidades/${id}/todo`, {
-        headers: { Authorization: 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' },
-      })
-      .then(({ data }) => {
-        if (data.estado) {
-          setLocalidad(data.data);
-          if (reconcile) {
-            const freshItems: SillaItem[] = data.data.items ?? [];
-            const ud = getUserData();
-            setSel(prev => prev.filter(s => {
-              const fresh = freshItems.find(fi => fi.idsilla === s.idsilla);
-              return fresh && fresh.estado !== 'disponible' && fresh.cedula === ud.cedula;
-            }));
-          }
+
+    const promesa: Promise<LocalidadData | null> = esCorrelativo
+      ? axios
+          .get(`https://api.t-ickets.com/mikroti/Boleteria/localidades/${id}/todo`, {
+            headers: { Authorization: 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==' },
+          })
+          .then(({ data }) => (data.estado ? (data.data as LocalidadData) : null))
+      : obtenerMapaLocalidad(idEspacioRef.current!, id).then((r) => ({
+          id: Number(id),
+          nombre: '',
+          tipo,
+          resumen: r.resumen,
+          items: r.items,
+        }));
+
+    promesa
+      .then((data) => {
+        if (!data) return;
+        setLocalidad(data);
+        if (reconcile) {
+          const freshItems: SillaItem[] = data.items ?? [];
+          const ud = getUserData();
+          setSel(prev => prev.filter(s => {
+            const fresh = freshItems.find(fi => fi.idsilla === s.idsilla);
+            return fresh && fresh.estado !== 'disponible' && fresh.cedula === ud.cedula;
+          }));
         }
       })
       .catch(() => {})
       .finally(() => setCargando(false));
   };
 
-  /* Carga inicial */
-  useEffect(() => { cargarLocalidad(false); }, [id]); // eslint-disable-line
+  /* Carga inicial — correlativo no necesita nada más de entrada */
+  useEffect(() => {
+    if (tipo === 'correlativo') cargarLocalidad(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, tipo]);
+
+  /* Alineación/orden por fila + id_espacio configurados en el admin
+     (fila/mesa; correlativo no usa mapa de sillas individuales) */
+  useEffect(() => {
+    if (tipo === 'correlativo') return;
+    obtenerConfiguracionLocalidad(id).then(cfg => {
+      setAlineacionFilas(cfg.alineacion);
+      setOrdenSillasFilas(cfg.ordenSillas);
+      setIdEspacio(cfg.idEspacio);
+    });
+  }, [id, tipo]);
+
+  /* En cuanto se conoce id_espacio (fila/mesa) recién se puede pedir el mapa real */
+  useEffect(() => {
+    if (tipo === 'correlativo' || idEspacio == null) return;
+    cargarLocalidad(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idEspacio, tipo]);
 
   /* Al volver a la página: resetear flag de pago y recargar estado real de asientos */
   useIonViewWillEnter(() => {
@@ -302,7 +375,9 @@ const Localidad: React.FC = () => {
       <IonHeader>
         <IonToolbar className="loc-toolbar">
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/dashboard/eventos" text="" />
+            <IonButton onClick={intentarSalir}>
+              <IonIcon icon={chevronBackOutline} slot="icon-only" />
+            </IonButton>
           </IonButtons>
           <IonTitle>{nombre || 'Seleccionar asientos'}</IonTitle>
         </IonToolbar>
@@ -394,8 +469,8 @@ const Localidad: React.FC = () => {
                                 <span>Fila {f}</span>
                                 <small>{disp} disp.</small>
                               </div>
-                              <div className="seats-inline">
-                                {items.map((item, idx) => (
+                              <div className="seats-inline" style={{ justifyContent: claseAlineacion(alineacionFilas, f) }}>
+                                {enOrdenVisual(ordenSillasFilas, f, items).map((item, idx) => (
                                   <button key={item.idsilla}
                                     className={`seat ${seatClass(item)} ${bloqueada(item) && item.estado === 'disponible' ? 'seat-blocked' : ''} ${procesando.has(item.idsilla) ? 'seat-loading' : ''}`}
                                     onClick={() => toggle(item)}
@@ -500,6 +575,17 @@ const Localidad: React.FC = () => {
         position="top"
         color="danger"
         onDidDismiss={() => setToast('')}
+      />
+
+      <IonAlert
+        isOpen={confirmarSalir}
+        header="¿Salir sin terminar?"
+        message="Vas a perder los asientos que seleccionaste."
+        buttons={[
+          { text: 'Seguir eligiendo', role: 'cancel' },
+          { text: 'Salir', role: 'destructive', handler: () => history.goBack() },
+        ]}
+        onDidDismiss={() => setConfirmarSalir(false)}
       />
     </IonPage>
   );

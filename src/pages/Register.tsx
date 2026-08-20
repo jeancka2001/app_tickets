@@ -16,6 +16,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import axios from 'axios';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Register.css';
 
 const Register: React.FC = () => {
@@ -47,16 +48,8 @@ const Register: React.FC = () => {
     setCargando(true);
     setError('');
     try {
-      console.log("datos", {
-        nombreCompleto: nombreCompleto.trim(),
-        email: email.trim().toLowerCase(),
-        password: cedula.trim(),
-        movil: movil.trim(),
-        ciudad: ciudad.trim(),
-        cedula: cedula.trim(),
-      } )
       const { data } = await axios.post(
-        'https://api.ticketsecuador.ec/ms_login/api/v1/registro_suscriptor',
+        'https://api.t-ickets.com/ms_login/api/v1/registro_suscriptor',
         {
           nombreCompleto: nombreCompleto.trim(),
           email:          email.trim().toLowerCase(),
@@ -64,9 +57,9 @@ const Register: React.FC = () => {
           movil:          movil.trim(),
           ciudad:         ciudad.trim(),
           cedula:         cedula.trim(),
-        }
+        },
+        { headers: { 'Content-Type': 'application/json', ...MS_LOGIN_AUTH_HEADERS } }
       );
-      console.log("respuesta de add usuario",data)
 
       if (data.success) {
         setExito(true);

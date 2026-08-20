@@ -2,7 +2,7 @@ import { NativeBiometric, AccessControl } from '@capgo/capacitor-native-biometri
 
 /* Identificador del "servicio" bajo el cual se guardan las credenciales
    en el almacenamiento seguro del dispositivo (Keystore en Android). */
-const SERVER = 'ec.tickets.app';
+const SERVER = 'ec.ticketsEC.app';
 
 /* Bandera NO sensible (no es la contraseña, solo un "sí/no") en localStorage.
    Sirve para saber sincrónicamente, sin llamar al plugin nativo, si hay que
@@ -36,9 +36,40 @@ export const hayCredencialesGuardadas = async (): Promise<boolean> => {
   }
 };
 
+export interface ResultadoGuardadoBiometrico {
+  ok: boolean;
+  /** Mensaje listo para mostrarle al usuario. Vacío si no aplica mostrar nada. */
+  mensaje: string;
+}
+
+/* Traduce el código de error del plugin (ver BiometricAuthError en sus
+   definitions.d.ts) a un mensaje entendible. Los códigos de "el usuario
+   canceló a propósito" no generan mensaje — no hay nada que avisar ahí. */
+const CODIGOS_SIN_AVISO = new Set(['11', '15', '16', '17']); // APP/SYSTEM/USER cancel, USER_FALLBACK
+
+const MENSAJES_ERROR_BIOMETRIA: Record<string, string> = {
+  '1': 'Este dispositivo no tiene sensor de huella disponible.',
+  '2': 'El sensor de huella quedó bloqueado por intentos fallidos. Desbloquea tu teléfono con tu PIN o patrón e inténtalo de nuevo la próxima vez.',
+  '3': 'No tienes ninguna huella configurada en este dispositivo. Actívala en Ajustes para poder usarla aquí.',
+  '4': 'El sensor de huella está bloqueado temporalmente por varios intentos fallidos. Espera unos segundos e inténtalo de nuevo la próxima vez que inicies sesión.',
+  '10': 'No se reconoció tu huella. Inténtalo de nuevo la próxima vez que inicies sesión.',
+  '14': 'Tu teléfono no tiene PIN, patrón ni contraseña configurado, así que no se puede proteger el inicio de sesión con huella.',
+};
+
+const describirErrorGuardado = (e: unknown): ResultadoGuardadoBiometrico => {
+  const code = String((e as { code?: string | number })?.code ?? '');
+  if (CODIGOS_SIN_AVISO.has(code)) return { ok: false, mensaje: '' };
+  const mensaje = MENSAJES_ERROR_BIOMETRIA[code]
+    || 'No se pudo activar el inicio de sesión con huella. Puedes intentarlo de nuevo la próxima vez que inicies sesión.';
+  return { ok: false, mensaje };
+};
+
 /* Guarda usuario/contraseña protegidos por huella (Android Keystore / iOS Keychain).
    No se guarda nada en localStorage: solo vive en el almacenamiento seguro del OS. */
-export const guardarCredencialesBiometricas = async (usuario: string, contrasena: string): Promise<void> => {
+export const guardarCredencialesBiometricas = async (
+  usuario: string,
+  contrasena: string
+): Promise<ResultadoGuardadoBiometrico> => {
   try {
     await NativeBiometric.setCredentials({
       username: usuario,
@@ -49,8 +80,10 @@ export const guardarCredencialesBiometricas = async (usuario: string, contrasena
     });
     localStorage.setItem(FLAG_BIOMETRIA_ACTIVA, '1');
     console.log('[biometria] setCredentials OK');
+    return { ok: true, mensaje: '' };
   } catch (e) {
-    console.warn('[biometria] setCredentials falló (dispositivo sin huella configurada?)', e);
+    console.warn('[biometria] setCredentials falló', e);
+    return describirErrorGuardado(e);
   }
 };
 

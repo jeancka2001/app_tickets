@@ -30,6 +30,7 @@ import {
 } from 'ionicons/icons';
 import axios from 'axios';
 import marcaTickets from '../images/MARCA_TICKETS.png';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Boletos.css';
 
 interface Asiento {
@@ -139,7 +140,7 @@ const Boletos: React.FC = () => {
         {
           headers: {
             'Content-Type': 'application/json',
-            'authorization-ticket': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+            ...MS_LOGIN_AUTH_HEADERS,
           },
         }
       );

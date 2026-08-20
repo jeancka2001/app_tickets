@@ -184,6 +184,8 @@
     --background-activated: #2a0e0e;
     --color: #f87171;
     --box-shadow: none;
+  }
+  .btn-logout::part(native) {
     border: 1px solid #4a1a1a;
   }
 
@@ -226,5 +228,10 @@
   --box-shadow: 0 2px 12px rgba(231, 76, 60, 0.15);
   font-weight: 600;
   height: 50px;
+}
+/* El borde va sobre la superficie visible real del botón (::part(native)),
+   no sobre ion-button en sí — así sigue la misma esquina redondeada que
+   --border-radius, en vez de verse como un recuadro suelto alrededor. */
+.btn-logout::part(native) {
   border: 1px solid #fcd9d9;
 }

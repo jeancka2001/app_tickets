@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Localidad from './pages/Localidad';
 import Pago from './pages/Pago';
+import AsignarAsiento from './pages/AsignarAsiento';
 import { PendientesProvider } from './context/PendientesContext';
 import { AppLockProvider } from './context/AppLockContext';
 import LockScreen from './components/LockScreen';
@@ -42,45 +43,77 @@ const EventoDeepLink: React.FC = () => {
   return null;
 };
 
-/* ── Escucha deep links nativos de Capacitor ── */
+/* Link de asignación de asientos (cédula+token = credencial propia, nada
+   que ver con userData): .../asignar-asiento/{cedula}/{token} */
+const parseAsignacion = (u: URL): { cedula: string; token: string } | null => {
+  const m = u.pathname.match(/\/asignar-asiento\/([^/]+)\/([^/]+)/i);
+  return m ? { cedula: m[1], token: m[2] } : null;
+};
+
+const parseCode = (url: string): string | null => {
+  try {
+    const u = new URL(url);
+
+    /* Deep link propio (mientras no haya Android App Links verificados):
+       ectickets://CODIGO  o  ectickets://evento/CODIGO */
+    if (u.protocol === 'ectickets:') {
+      const host     = (u.hostname || '').trim();
+      const pathCode = u.pathname.replace(/^\/+/, '').trim();
+      const raw = host.toLowerCase() === 'evento' && pathCode ? pathCode : (host || pathCode);
+      return /^[A-Z0-9]+$/i.test(raw) ? raw.toUpperCase() : null;
+    }
+
+    /* Formato real compartido por la web: https://www.tickets.com.ec/#CODIGO */
+    const fromHash = u.hash.replace('#', '').trim();
+    if (/^[A-Z0-9]+$/i.test(fromHash)) return fromHash.toUpperCase();
+
+    /* Alternativa usada también por la web: ?evento=CODIGO */
+    const fromQuery = u.searchParams.get('evento');
+    if (fromQuery) return fromQuery.toUpperCase();
+
+    /* Compatibilidad con un eventual /evento/CODIGO */
+    const m = u.pathname.match(/\/evento\/([A-Z0-9]+)/i);
+    return m?.[1]?.toUpperCase() ?? null;
+  } catch { return null; }
+};
+
+/* ── Escucha deep links nativos de Capacitor ──
+   appUrlOpen SOLO se dispara si la app ya estaba corriendo (Android reusa
+   la Activity via onNewIntent). Si la app estaba completamente cerrada,
+   Android la abre desde cero con el link como intent de lanzamiento, y ese
+   caso nunca llega a appUrlOpen — hay que leerlo aparte con getLaunchUrl(). */
 const CapacitorUrlHandler: React.FC = () => {
   const history = useHistory();
 
   useEffect(() => {
-    const parseCode = (url: string): string | null => {
+    const resolverUrl = (url: string, push: boolean) => {
       try {
         const u = new URL(url);
-
-        /* Deep link propio (mientras no haya Android App Links verificados):
-           ectickets://CODIGO  o  ectickets://evento/CODIGO */
-        if (u.protocol === 'ectickets:') {
-          const host     = (u.hostname || '').trim();
-          const pathCode = u.pathname.replace(/^\/+/, '').trim();
-          const raw = host.toLowerCase() === 'evento' && pathCode ? pathCode : (host || pathCode);
-          return /^[A-Z0-9]+$/i.test(raw) ? raw.toUpperCase() : null;
+        const asignacion = parseAsignacion(u);
+        if (asignacion) {
+          /* Independiente de cualquier sesión existente: no toca
+             pendingEventCode ni pasa por /home. */
+          const ruta = `/asignar-asiento/${asignacion.cedula}/${asignacion.token}`;
+          if (push) history.push(ruta); else history.replace(ruta);
+          return;
         }
+      } catch { /* url inválida, sigue con el flujo de eventos */ }
 
-        /* Formato real compartido por la web: https://www.tickets.com.ec/#CODIGO */
-        const fromHash = u.hash.replace('#', '').trim();
-        if (/^[A-Z0-9]+$/i.test(fromHash)) return fromHash.toUpperCase();
-
-        /* Alternativa usada también por la web: ?evento=CODIGO */
-        const fromQuery = u.searchParams.get('evento');
-        if (fromQuery) return fromQuery.toUpperCase();
-
-        /* Compatibilidad con un eventual /evento/CODIGO */
-        const m = u.pathname.match(/\/evento\/([A-Z0-9]+)/i);
-        return m?.[1]?.toUpperCase() ?? null;
-      } catch { return null; }
-    };
-
-    const sub = CapApp.addListener('appUrlOpen', ({ url }) => {
       const code = parseCode(url);
       if (code) {
         sessionStorage.setItem('pendingEventCode', code);
-        history.push(localStorage.getItem('userData') ? '/dashboard/eventos' : '/home');
+        const ruta = localStorage.getItem('userData') ? '/dashboard/eventos' : '/home';
+        if (push) history.push(ruta); else history.replace(ruta);
       }
+    };
+
+    /* Arranque en frío: la app se abrió recién por este link. */
+    CapApp.getLaunchUrl().then((res) => {
+      if (res?.url) resolverUrl(res.url, false);
     });
+
+    /* App ya corriendo y llega un link nuevo. */
+    const sub = CapApp.addListener('appUrlOpen', ({ url }) => resolverUrl(url, true));
 
     return () => { sub.then(h => h.remove()); };
   }, [history]);
@@ -109,13 +142,14 @@ const App: React.FC = () => {
             <Route path="/localidad/:id" component={Localidad} />
             <Route path="/pago" component={Pago} />
             <Route path="/evento/:codigo" component={EventoDeepLink} />
+            <Route path="/asignar-asiento/:cedula/:token" component={AsignarAsiento} />
             <Route exact path="/">
               <Redirect to={localStorage.getItem('userData') ? '/dashboard' : '/home'} />
             </Route>
           </IonRouterOutlet>
+          <LockScreen />
         </IonReactRouter>
       </PendientesProvider>
-      <LockScreen />
     </AppLockProvider>
   </IonApp>
   );

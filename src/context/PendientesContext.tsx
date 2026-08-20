@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import axios from 'axios';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 
 const API_HDR = {
-  'authorization-ticket': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+  ...MS_LOGIN_AUTH_HEADERS,
   'Content-Type': 'application/json',
 };
 const URL_BASE = 'https://api.t-ickets.com/ms_login/api/v1';

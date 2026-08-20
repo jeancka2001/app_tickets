@@ -24,6 +24,7 @@ import {
 } from '../utils/biometricAuth';
 import { useAppLock } from '../context/AppLockContext';
 import { inicializarNotificaciones } from '../utils/pushNotifications';
+import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 
 const Home: React.FC = () => {
   const [usuario, setUsuario] = useState('');
@@ -31,6 +32,7 @@ const Home: React.FC = () => {
   const [guardarSesion, setGuardarSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [avisoHuella, setAvisoHuella] = useState('');
   const history = useHistory();
   const { unlock } = useAppLock();
 
@@ -49,16 +51,24 @@ const Home: React.FC = () => {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Basic Ym9sZXRlcmlhOmJvbGV0ZXJpYQ==',
+            ...MS_LOGIN_AUTH_HEADERS,
           },
         }
       );
       if (data.success == true && data.data) {
         localStorage.setItem('userData', JSON.stringify(data.data));
-        if (guardar) await guardarCredencialesBiometricas(usuarioIn, contrasenaIn);
+        let esperarAviso = 0;
+        if (guardar) {
+          const resultado = await guardarCredencialesBiometricas(usuarioIn, contrasenaIn);
+          if (!resultado.ok && resultado.mensaje) {
+            setAvisoHuella(resultado.mensaje);
+            esperarAviso = 2600; // deja ver el aviso antes de salir de esta pantalla
+          }
+        }
         inicializarNotificaciones();
         unlock();
-        history.replace('/dashboard');
+        if (esperarAviso) setTimeout(() => history.replace('/dashboard'), esperarAviso);
+        else history.replace('/dashboard');
       } else {
         setError('Credenciales incorrectas');
       }
@@ -158,7 +168,7 @@ const Home: React.FC = () => {
               checked={guardarSesion}
               onIonChange={(e) => setGuardarSesion(e.detail.checked)}
             >
-              Guardar mi inicio de sesión (ingresar luego con huella)
+              Guardar sesión
             </IonCheckbox>
 
             <IonButton
@@ -188,6 +198,15 @@ const Home: React.FC = () => {
           color="danger"
           position="bottom"
           onDidDismiss={() => setError('')}
+        />
+
+        <IonToast
+          isOpen={!!avisoHuella}
+          message={avisoHuella}
+          duration={2600}
+          color="warning"
+          position="top"
+          onDidDismiss={() => setAvisoHuella('')}
         />
       </IonContent>
     </IonPage>

@@ -1,4 +1,4 @@
-package ec.tickets.app;
+package ec.ticketsEC.app;
 
 import com.getcapacitor.BridgeActivity;
 

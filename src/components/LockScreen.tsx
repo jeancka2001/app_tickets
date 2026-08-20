@@ -1,17 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { IonButton, IonIcon, IonSpinner } from '@ionic/react';
 import { fingerPrintOutline, lockClosedOutline } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import marcaTickets from '../images/MARCA_TICKETS.png';
 import { obtenerCredencialesBiometricas } from '../utils/biometricAuth';
 import { useAppLock } from '../context/AppLockContext';
 import './LockScreen.css';
 
+/* Rutas públicas que nunca deben quedar tapadas por el bloqueo de huella,
+   aunque exista otra sesión bloqueada en el mismo teléfono — no dependen de
+   userData y su única credencial va en la propia URL (cédula+token). */
+const RUTAS_EXENTAS = ['/asignar-asiento'];
+
 const LockScreen: React.FC = () => {
   const { locked, unlock } = useAppLock();
   const history = useHistory();
+  const location = useLocation();
   const [verificando, setVerificando] = useState(false);
   const intentadoAuto = useRef(false);
+
+  const rutaExenta = RUTAS_EXENTAS.some((r) => location.pathname.startsWith(r));
 
   const intentarHuella = async () => {
     setVerificando(true);
@@ -26,15 +34,15 @@ const LockScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (locked && !intentadoAuto.current) {
+    if (locked && !rutaExenta && !intentadoAuto.current) {
       intentadoAuto.current = true;
       intentarHuella();
     }
     if (!locked) intentadoAuto.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked]);
+  }, [locked, rutaExenta]);
 
-  if (!locked) return null;
+  if (!locked || rutaExenta) return null;
 
   const usarContrasena = () => {
     unlock();

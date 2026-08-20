@@ -72,14 +72,47 @@
   color: #27ae60;
 }
 
+/* ── Contenedor deslizable ─────────────────────────────────────
+   El espacio entre tarjetas (margen) vive AQUÍ, no dentro de .comp-card:
+   IonItemOptions se estira al alto total de IonItem, así que si el margen
+   quedaba dentro de la tarjeta, el panel de opciones salía más alto que
+   la tarjeta visible (se metía en el espacio en blanco de abajo). Con el
+   margen afuera, tarjeta y panel quedan exactamente del mismo tamaño, y
+   overflow:hidden + el mismo border-radius recortan las opciones para
+   que se ajusten a las esquinas redondeadas de la tarjeta. */
+.comp-sliding {
+  /* ion-item-sliding ya trae width:100% por defecto — si además se le pone
+     margen horizontal, el ancho real pasa a ser 100% + el margen y se
+     desborda por la derecha. Con calc() se descuenta ese margen del ancho. */
+  width: calc(100% - 32px);
+  margin: 0 16px 10px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Se anula todo el "chrome" propio de IonItem (fondo, padding, línea)
+   para que se siga viendo exactamente como el .comp-card de antes. */
+.comp-item {
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+  --inner-padding-end: 0;
+  --min-height: 0;
+}
+.comp-item::part(native) { padding: 0; }
+
 /* ── Cards ─────────────────────────────────────────────────── */
 .comp-card {
   background: #ffffff;
   border-radius: 12px;
-  margin: 0 16px 10px;
+  margin: 0;
   padding: 12px 14px;
   box-shadow: 0 2px 10px rgba(15, 52, 96, 0.08);
   border-left: 4px solid #e0e5f0;
+  /* .comp-item (IonItem) es flex por dentro: sin esto la tarjeta se
+     encoge a su contenido en vez de ocupar todo el ancho disponible. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .comp-card-pendiente { border-left-color: #f08121; }
@@ -391,6 +424,32 @@
   height: 48px;
 }
 
+/* ── Modal "Ver orden" ────────────────────────────────────────── */
+.orden-detalle { padding: 20px 18px 32px; }
+
+.orden-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef1f7;
+  font-size: 0.9rem;
+}
+
+.orden-fila span:first-child { color: #6b7a90; }
+.orden-fila span:last-child  { font-weight: 600; text-align: right; }
+
+.orden-divider { height: 14px; }
+
+.orden-total {
+  border-bottom: none;
+  padding-top: 14px;
+  font-size: 1.05rem;
+}
+.orden-total span:first-child { color: #1a1e52; font-weight: 700; }
+.orden-total span:last-child  { color: #1a1e52; font-weight: 800; }
+
 @media (prefers-color-scheme: dark) {
   .compras-content  { --background: #101624; }
 
@@ -448,4 +507,9 @@
   .rep-ocr-ok         { background: #0e2218; color: #4ade80; }
   .rep-ocr-warn       { background: #1e1a00; color: #fcd34d; }
   .rep-ocr-val        { color: #e8ecf5; }
+
+  .orden-fila { border-bottom-color: #2a3050; color: #e8ecf5; }
+  .orden-fila span:first-child { color: #9da5b4; }
+  .orden-total span:first-child,
+  .orden-total span:last-child { color: #7b8fdc; }
 }
