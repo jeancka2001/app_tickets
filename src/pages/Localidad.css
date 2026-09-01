@@ -8,12 +8,36 @@
 
 .loc-content { --background: #f4f6fb; }
 
+/* ── Temporizador de selección ───────────────────────────────── */
+.temporizador-chip {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 12px 14px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #eef0fb;
+  color: #2d358c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.temporizador-chip ion-icon { font-size: 1rem; }
+.temporizador-critico {
+  background: #fde8e8;
+  color: #c0392b;
+  animation: temporizador-pulso 1s infinite;
+}
+@keyframes temporizador-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* ── Mapa del lugar ───────────────────────────────────────── */
 .venue-map { padding: 14px 14px 0; }
 .venue-label {
   font-size: 0.68rem; font-weight: 600; color: #9da5b4;
   text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 5px;
 }
+.venue-bloques { padding: 10px 14px 0; text-align: center; }
+
 .venue-img {
   width: 100%; border-radius: 10px; display: block;
   box-shadow: 0 3px 10px rgba(15,52,96,.1);
@@ -75,6 +99,7 @@
   padding: 2px 7px; border-radius: 20px;
 }
 .l-disp { background: #d4f1dd; color: #155724; border: 1px solid #27ae60; }
+.l-res  { background: #e3e5f8; color: #40456f; border: 1px solid #8890c9; }
 .l-ocp  { background: #fde8e8; color: #7f1d1d; border: 1px solid #e74c3c; }
 .l-sel  { background: #fef9c3; color: #78350f; border: 1px solid #f59e0b; }
 
@@ -133,7 +158,10 @@
 }
 .fila-tag span  { font-size: 0.7rem; font-weight: 800; color: #2d358c; }
 .fila-tag small { font-size: 0.55rem; color: #27ae60; font-weight: 600; }
-.seats-inline { display: flex; flex-grow: 1; flex-wrap: wrap; gap: 3px; }
+/* Sin wrap — cada fila es una sola tira horizontal (igual que la web),
+   el contenedor .map-scroll se encarga del scroll horizontal en vez de
+   partir la fila en varias líneas al hacer zoom. */
+.seats-inline { display: flex; flex-grow: 1; flex-wrap: nowrap; gap: 3px; }
 
 /* ── VISTA MESA ───────────────────────────────────────────── */
 .mesa-map { display: flex; flex-direction: column; gap: 14px; }
@@ -197,6 +225,7 @@
   display: flex; align-items: center; justify-content: center; padding: 0;
   transition: transform .1s;
   line-height: 1;
+  flex-shrink: 0;
 }
 .seat:not(:disabled):active { transform: scale(0.82); }
 
@@ -208,6 +237,9 @@
 /* verde: disponible */
 .sc-disp { background: #d4f1dd; color: #155724; border: 1.5px solid #27ae60; }
 .sc-disp:hover { background: #b6e8c8; }
+
+/* violeta/gris: reservada por otra persona ahora mismo (puede que se libere) */
+.sc-res  { background: #e3e5f8; color: #40456f; border: 1.5px solid #8890c9; cursor: not-allowed; opacity: 0.75; }
 
 /* rojo: ocupada */
 .sc-ocp  { background: #fde8e8; color: #e74c3c; border: 1.5px solid #e74c3c; cursor: not-allowed; opacity: 0.65; }
@@ -257,8 +289,12 @@
   .z-pct  { color: #7b8fdc; }
 
   .l-disp { background: #0e2a18; color: #4ade80; border-color: #27ae60; }
+  .l-res  { background: #1e2050; color: #b3b8f0; border-color: #6b72c9; }
   .l-ocp  { background: #2a0e0e; color: #f87171; border-color: #e74c3c; }
   .l-sel  { background: #2a1e00; color: #fcd34d; border-color: #f59e0b; }
+
+  .temporizador-chip     { background: #1e2540; color: #7b8fdc; }
+  .temporizador-critico  { background: #2a0e0e; color: #f87171; }
 
   .max-warn { background: #2a1400; color: #f08121; }
 
@@ -285,6 +321,7 @@
   .cnt-llena      { color: #f87171; }
 
   .sc-disp { background: #0e2a18; color: #4ade80; border-color: #27ae60; }
+  .sc-res  { background: #1e2050; color: #b3b8f0; border-color: #6b72c9; }
   .sc-ocp  { background: #2a0e0e; color: #f87171; border-color: #e74c3c; }
   .sc-sel  { background: #2a1e00; color: #fcd34d; border-color: #f59e0b; }
 }

@@ -9,7 +9,7 @@ http://ionicframework.com/docs/theming/ */
   transform: translate(-50%, -50%);
   width: 68vw;
   max-width: 270px;
-  opacity: 0.055;
+  opacity: 0.15;
   pointer-events: none;
   user-select: none;
   z-index: 0;
@@ -20,7 +20,7 @@ http://ionicframework.com/docs/theming/ */
   display: block;
 }
 @media (prefers-color-scheme: dark) {
-  .page-watermark { opacity: 0.08; filter: brightness(6); }
+  .page-watermark { opacity: 0.14; filter: brightness(6); }
 }
 
 /* Logo en toolbar – compartido por todas las páginas */

@@ -13,6 +13,7 @@ import {
   IonSpinner,
   IonText,
   IonModal,
+  IonPopover,
   IonBadge,
   IonAlert,
   IonToast,
@@ -166,6 +167,14 @@ const Eventos: React.FC = () => {
   const [cargandoPrecios, setCargandoPrecios] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
 
+  /* Vista rápida de precios ("Ver precios") — un popover chico solo para
+     consultar, sin entrar al flujo de compra (eso lo hace "Comprar",
+     que abre el modal completo con selección de localidad). */
+  const [popoverEvento, setPopoverEvento] = useState<Evento | null>(null);
+  const [popoverEventTarget, setPopoverEventTarget] = useState<Event | undefined>(undefined);
+  const [popoverPrecios, setPopoverPrecios] = useState<Localidad[]>([]);
+  const [cargandoPopover, setCargandoPopover] = useState(false);
+
   const [alertPendiente, setAlertPendiente] = useState(false);
   const [verMapa, setVerMapa] = useState(false);
 
@@ -237,6 +246,32 @@ const Eventos: React.FC = () => {
     setModalAbierto(false);
     setEventoSeleccionado(null);
     setPrecios([]);
+  };
+
+  /* "Ver precios" — mismo endpoint que abrirPrecios, pero solo muestra un
+     popover chico con nombre + precio (sin botón de seleccionar/comprar). */
+  const verPreciosRapido = async (e: React.MouseEvent, evento: Evento) => {
+    e.stopPropagation();
+    setPopoverEvento(evento);
+    setPopoverEventTarget(e.nativeEvent);
+    setPopoverPrecios([]);
+    setCargandoPopover(true);
+    try {
+      const { data } = await axios.get(
+        `https://api.t-ickets.com/ms_login/ListaPreciosLocaDispo/${evento.codigoEvento}`,
+        { headers: MS_LOGIN_AUTH_HEADERS }
+      );
+      if (data.success) setPopoverPrecios(data.data);
+    } catch { /* silent */ }
+    finally {
+      setCargandoPopover(false);
+    }
+  };
+
+  const cerrarPopoverPrecios = () => {
+    setPopoverEvento(null);
+    setPopoverEventTarget(undefined);
+    setPopoverPrecios([]);
   };
 
   const seleccionarLocalidad = (precio: Localidad) => {
@@ -387,7 +422,7 @@ const Eventos: React.FC = () => {
                     <span>{ev.lugarConcierto}, {ev.cuidadConcert}</span>
                   </div>
                   <div className="evento-footer">
-                    <div className="evento-precio">
+                    <div className="evento-precio" onClick={(e) => verPreciosRapido(e, ev)}>
                       <IonIcon icon={pricetagOutline} />
                       <span>Ver precios</span>
                     </div>
@@ -436,6 +471,37 @@ const Eventos: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Popover chico de "Ver precios" — solo consulta, sin comprar */}
+        <IonPopover
+          isOpen={!!popoverEvento}
+          event={popoverEventTarget}
+          onDidDismiss={cerrarPopoverPrecios}
+          className="precios-popover"
+        >
+          <div className="precios-popover-body">
+            <p className="pp-titulo">{popoverEvento?.nombreConcierto}</p>
+
+            {cargandoPopover && (
+              <div className="pp-cargando"><IonSpinner name="crescent" /></div>
+            )}
+
+            {!cargandoPopover && popoverPrecios.length === 0 && (
+              <p className="pp-vacio">No hay precios disponibles</p>
+            )}
+
+            {!cargandoPopover && popoverPrecios.length > 0 && (
+              <ul className="pp-lista">
+                {popoverPrecios.map((p) => (
+                  <li key={p.id} className="pp-item">
+                    <span className="pp-nombre">{p.localidad.replace(/__+/g, '').trim()}</span>
+                    <span className="pp-precio">${parseFloat(p.precio_normal).toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </IonPopover>
 
         {/* Modal de localidades y precios */}
         <IonModal isOpen={modalAbierto} onDidDismiss={cerrarModal} className="precios-modal">

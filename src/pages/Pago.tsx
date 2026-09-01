@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButtons, IonBackButton, IonButton, IonSpinner, IonIcon,
@@ -11,6 +11,7 @@ import {
 } from 'ionicons/icons';
 import axios from 'axios';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
+import { obtenerMetodosPagoActivos } from '../utils/metodosPago';
 import './Pago.css';
 
 interface PagoState {
@@ -47,11 +48,40 @@ const API_HDR = {
 };
 const URL_BASE = 'https://api.t-ickets.com/ms_login/api/v1';
 
-const METODOS = [
-  { key: 'Tarjeta',         label: 'Tarjeta de crédito / débito', pct: 0.10, desc: '+10% comisión procesamiento' },
-  { key: 'Duna',            label: 'Duna / Banco Pichincha',       pct: 0.06, desc: '+6% comisión procesamiento'  },
-  { key: 'Banco Guayaquil', label: 'Banco Guayaquil App',          pct: 0.02, desc: '+2% comisión procesamiento'  },
-  { key: 'Deposito',        label: 'Transferencia / Depósito',     pct: 0.04, desc: '+4%, aprobación manual'       },
+interface MetodoItem {
+  key: string;
+  label: string;
+  pct: number;
+  desc: string;
+}
+
+/* Todos los métodos que el admin activa/desactiva y les configura la
+   comisión (global y por evento) desde ConfiguracionPagos en la web —
+   incluye tanto las pasarelas como los métodos manuales, porque desde
+   la migración "config_metodos_manuales" (27-ago-2026) también son
+   filas reales de configuracion_pagos, con el mismo switch
+   activo/inactivo y comisión que PagoPlux/Payphone/Duna.
+   "configMetodo" es el nombre exacto que usa configuracion_pagos en el
+   backend; puede diferir de la key/etiqueta que usa esta pantalla.
+
+   OJO: la opción pública "Transferencia/Deposito" en ModalFormasPago.js
+   (web, checkout de cliente — clienteInfo()==null) manda forma_pago
+   "Transferencia", NO "Deposito" — ese último radio existe en el mismo
+   componente pero queda oculto con "d-none" y solo lo usa el flujo
+   interno de venta en punto de venta (clienteInfo()!=null). Por eso acá
+   la key de UI "Deposito" se resuelve contra configMetodo "Transferencia"
+   (8% por defecto) y no contra "Deposito" (0% por defecto) — eran filas
+   distintas en configuracion_pagos y estábamos leyendo la que no aplica
+   al comprador final, de ahí que en la app la comisión saliera en 0%.
+   Igual "Banco Guayaquil" en la app es el método "Efectivo" del admin.
+   Comisión por defecto = valor sembrado en la tabla (fallback solo si
+   falla la consulta en vivo). */
+const METODOS_CONFIGURABLES: { key: string; configMetodo: string; label: string; pctDefault: number }[] = [
+  { key: 'PagoPlux',        configMetodo: 'PagoPlux',      label: 'Tarjeta de crédito / débito', pctDefault: 0.11 },
+  { key: 'Payphone',        configMetodo: 'Payphone',      label: 'Payphone',                     pctDefault: 0.11 },
+  { key: 'Duna',            configMetodo: 'Duna',          label: 'Duna / Banco Pichincha',        pctDefault: 0.11 },
+  { key: 'Deposito',        configMetodo: 'Transferencia', label: 'Transferencia / Depósito',      pctDefault: 0.08 },
+  { key: 'Banco Guayaquil', configMetodo: 'Efectivo',      label: 'Banco Guayaquil App',           pctDefault: 0.08 },
 ];
 
 const CUENTAS = [
@@ -73,12 +103,41 @@ const Pago: React.FC = () => {
   const ud = getUserData();
 
   /* ── Selección ── */
-  const [metodo, setMetodo]     = useState('Tarjeta');
+  const [metodo, setMetodo]     = useState('');
+  const [metodosDisponibles, setMetodosDisponibles] = useState<MetodoItem[] | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError]       = useState('');
   const [urlPago, setUrlPago]   = useState('');
   const [fase, setFase]         = useState<Fase>('seleccion');
   const [idRegistro, setIdRegistro] = useState<number | null>(null);
+
+  /* Trae, igual que ModalFormasPago.js/ModalPago.js en la web, qué
+     pasarelas están activas y su comisión bancaria configurada — así si
+     el admin desactiva una pasarela o cambia el % en el panel web, la
+     app lo refleja sin necesidad de actualizar la app. Se manda el
+     codigoEvento para que aplique, si existe, la comisión específica de
+     ese evento configurada en "Comisión por evento" (en vez de la
+     comisión global del método). */
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const activos = await obtenerMetodosPagoActivos(st.codigoEvento);
+      const porMetodo = new Map(activos.map(a => [a.metodo, a]));
+      const lista: MetodoItem[] = METODOS_CONFIGURABLES
+        .filter(m => activos.length === 0 || porMetodo.get(m.configMetodo)?.activo)
+        .map(m => {
+          const pct = porMetodo.get(m.configMetodo)?.comision_porcentaje ?? m.pctDefault;
+          const desc = m.key === 'Deposito'
+            ? (pct > 0 ? `+${Math.round(pct * 100)}% · aprobación manual` : 'Aprobación manual')
+            : `+${Math.round(pct * 100)}% comisión procesamiento`;
+          return { key: m.key, label: m.label, pct, desc };
+        });
+      if (cancelado) return;
+      setMetodosDisponibles(lista);
+      setMetodo(prev => prev || lista[0]?.key || '');
+    })();
+    return () => { cancelado = true; };
+  }, [st.codigoEvento]);
 
   /* ── Depósito ── */
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -91,7 +150,7 @@ const Pago: React.FC = () => {
   const [enviandoPago, setEnviandoPago] = useState(false);
   const [errorDep,     setErrorDep]     = useState('');
 
-  const met = METODOS.find(x => x.key === metodo)!;
+  const met = metodosDisponibles?.find(x => x.key === metodo) ?? { key: '', label: '', pct: 0, desc: '' };
 
   /* Convertir siempre a number — location.state puede venir como string
      cuando Ionic reutiliza la página en la pila de navegación */
@@ -122,7 +181,15 @@ const Pago: React.FC = () => {
         id_usuario:  ud.id || ud.id_usuario || 0,
         cedula:      ud.cedula || '',
         email:       metodo === 'Deposito' ? 'pending.aprobacion@no-mail.local' : (ud.email || ''),
-        forma_pago: metodo === 'Banco Guayaquil' ? 'Efectivo' : metodo,
+        /* "Deposito" es solo la key interna de esta pantalla (controla qué
+           fase/UI mostrar) — al backend se manda "Transferencia", que es
+           lo que realmente envía ModalFormasPago.js en el checkout
+           público de la web para esta misma opción (ver comentario en
+           METODOS_CONFIGURABLES). "Banco Guayaquil" en la app == "Efectivo"
+           en el admin/backend. */
+        forma_pago: metodo === 'Banco Guayaquil' ? 'Efectivo'
+          : metodo === 'Deposito' ? 'Transferencia'
+          : metodo,
         concierto: [{
           nombreConcierto:     st.nombreEvento    || '',
           id_localidad:        st.idLocalidad,
@@ -595,19 +662,26 @@ const Pago: React.FC = () => {
 
             <div className="pago-card">
               <h3 className="pago-card-title">Método de pago</h3>
-              <div className="metodos-lista">
-                {METODOS.map(m => (
-                  <div key={m.key}
-                    className={`metodo-item ${metodo === m.key ? 'metodo-sel' : ''}`}
-                    onClick={() => setMetodo(m.key)}>
-                    <div className={`radio-circle ${metodo === m.key ? 'radio-on' : ''}`} />
-                    <div className="metodo-info">
-                      <span className="metodo-lbl">{m.label}</span>
-                      <span className="metodo-desc">{m.desc}</span>
+              {metodosDisponibles === null ? (
+                <div className="dep-ocr-loading">
+                  <IonSpinner name="crescent" />
+                  <span>Cargando métodos de pago…</span>
+                </div>
+              ) : (
+                <div className="metodos-lista">
+                  {metodosDisponibles.map(m => (
+                    <div key={m.key}
+                      className={`metodo-item ${metodo === m.key ? 'metodo-sel' : ''}`}
+                      onClick={() => setMetodo(m.key)}>
+                      <div className={`radio-circle ${metodo === m.key ? 'radio-on' : ''}`} />
+                      <div className="metodo-info">
+                        <span className="metodo-lbl">{m.label}</span>
+                        <span className="metodo-desc">{m.desc}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pago-card">
@@ -658,7 +732,7 @@ const Pago: React.FC = () => {
             {error && <p className="pago-error">{error}</p>}
 
             <IonButton expand="block" className="btn-confirmar"
-              onClick={confirmar} disabled={cargando}>
+              onClick={confirmar} disabled={cargando || !metodo}>
               {cargando
                 ? <><IonSpinner name="crescent" className="btn-spinner" /> Procesando…</>
                 : `Confirmar y pagar  $${total.toFixed(2)}`

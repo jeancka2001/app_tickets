@@ -2,16 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButtons, IonIcon, IonButton, IonSpinner, IonAlert,
-  IonText, IonToast, useIonViewWillLeave, useIonViewWillEnter,
+  IonText, IonToast, IonModal, useIonViewWillLeave, useIonViewWillEnter,
 } from '@ionic/react';
 import { useParams, useLocation, useHistory } from 'react-router-dom';
-import { addOutline, removeOutline, cartOutline, chevronBackOutline } from 'ionicons/icons';
+import { addOutline, removeOutline, cartOutline, chevronBackOutline, gridOutline, closeOutline, timeOutline } from 'ionicons/icons';
 import axios from 'axios';
 import { obtenerConfiguracionLocalidad, obtenerMapaLocalidad, claseAlineacion, enOrdenVisual } from '../utils/localidadConfig';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import './Localidad.css';
 
 const MAX_SEL = 10;
+
+/* Tiempo máximo para completar la selección antes de liberar automáticamente
+   (mismo espíritu del timer de 10 min que tiene la web, pero más corto y
+   estricto porque acá si además refrescamos el mapa en vivo). */
+const TIEMPO_SELECCION_SEG = 180;
+/* Cada cuánto se refresca el mapa mientras el cliente está eligiendo, para
+   que si otra persona reserva/compra un asiento se vea al toque. */
+const POLL_MS = 15000;
+
+const formatMMSS = (seg: number) => {
+  const s = Math.max(0, seg);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
 
 const API_HDR = {
   ...MS_LOGIN_AUTH_HEADERS,
@@ -102,6 +115,9 @@ const Localidad: React.FC = () => {
   const [alineacionFilas, setAlineacionFilas] = useState<Record<string, string>>({});
   const [ordenSillasFilas, setOrdenSillasFilas] = useState<Record<string, boolean>>({});
   const [idEspacio, setIdEspacio] = useState<number | null>(null);
+  const [imagenBloques, setImagenBloques] = useState<string | null>(null);
+  const [showBloques, setShowBloques] = useState(false);
+  const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_SELECCION_SEG);
 
   /* refs para closures en useIonViewWillLeave */
   const selRef        = useRef<SillaItem[]>([]);
@@ -109,10 +125,17 @@ const Localidad: React.FC = () => {
   const corrActivoRef = useRef(false);
   const pagandoRef    = useRef(false);      // si el usuario va a pagar, NO liberar
   const idEspacioRef  = useRef<number | null>(null);
+  const cargandoRef   = useRef(true);
+
+  /* Temporizador de selección + polling en vivo del mapa */
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const salioPorTiempoRef = useRef(false);
 
   useEffect(() => { selRef.current   = sel;      }, [sel]);
   useEffect(() => { cantRef.current  = cantidad; }, [cantidad]);
   useEffect(() => { idEspacioRef.current = idEspacio; }, [idEspacio]);
+  useEffect(() => { cargandoRef.current = cargando; }, [cargando]);
 
   const precio = parseFloat(st.precio || '0');
   const tipo   = (st.tipo || 'correlativo').toLowerCase();
@@ -150,11 +173,12 @@ const Localidad: React.FC = () => {
      mismo endpoint que la web (necesita id_espacio, por eso espera a que
      esté disponible) — el viejo "mikroti/Boleteria/.../todo" devolvía
      asientos que ya se habían borrado en la base de datos. */
-  const cargarLocalidad = (reconcile = false) => {
+  const cargarLocalidad = (reconcile = false, silencioso = false) => {
     const esCorrelativo = tipo === 'correlativo';
     if (!esCorrelativo && idEspacioRef.current == null) return;
+    if (silencioso && cargandoRef.current) return; // ya hay una carga en curso
 
-    setCargando(true);
+    if (!silencioso) setCargando(true);
 
     const promesa: Promise<LocalidadData | null> = esCorrelativo
       ? axios
@@ -184,14 +208,63 @@ const Localidad: React.FC = () => {
         }
       })
       .catch(() => {})
-      .finally(() => setCargando(false));
+      .finally(() => { if (!silencioso) setCargando(false); });
   };
+
+  /* ── Temporizador de selección (3 min) + refresco en vivo del mapa ──
+     Arrancan cuando la pantalla se vuelve visible (useIonViewWillEnter) y
+     se detienen al salir (useIonViewWillLeave) — así no siguen corriendo
+     de fondo mientras el cliente está en /pago con esta página oculta en
+     la pila de Ionic. */
+  const detenerTemporizadores = () => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (pollRef.current)  { clearInterval(pollRef.current);  pollRef.current  = null; }
+  };
+
+  const iniciarTemporizadores = () => {
+    detenerTemporizadores();
+    salioPorTiempoRef.current = false;
+    setSegundosRestantes(TIEMPO_SELECCION_SEG);
+    timerRef.current = setInterval(() => {
+      setSegundosRestantes(s => Math.max(0, s - 1));
+    }, 1000);
+    pollRef.current = setInterval(() => {
+      cargarLocalidad(true, true);
+    }, POLL_MS);
+  };
+
+  /* Se acabó el tiempo: liberar todo y salir sin pedir confirmación
+     (useIonViewWillLeave se encarga de liberar, igual que al salir manual,
+     porque pagandoRef sigue en false acá). */
+  useEffect(() => {
+    if (segundosRestantes > 0 || salioPorTiempoRef.current) return;
+    salioPorTiempoRef.current = true;
+    detenerTemporizadores();
+    setToast('Se acabó el tiempo para completar tu selección. Vuelve a intentarlo.');
+    history.goBack();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segundosRestantes]);
+
+  /* Limpieza de respaldo si el componente llega a desmontarse de verdad */
+  useEffect(() => detenerTemporizadores, []);
 
   /* Carga inicial — correlativo no necesita nada más de entrada */
   useEffect(() => {
     if (tipo === 'correlativo') cargarLocalidad(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, tipo]);
+
+  /* Imagen de referencia con la división por bloques del recinto (igual
+     que "Ver bloques en el mapa" en ModalCarritov.js) — solo se muestra
+     si el evento tiene una configurada. */
+  useEffect(() => {
+    if (!st.codigoEvento) return;
+    axios.get(`${URL_BASE}/imagenBloques/${st.codigoEvento}`, { headers: API_HDR })
+      .then(({ data }) => {
+        if (data?.success && data?.imagen_bloques) setImagenBloques(data.imagen_bloques);
+      })
+      .catch(() => {});
+  }, [st.codigoEvento]);
 
   /* Alineación/orden por fila + id_espacio configurados en el admin
      (fila/mesa; correlativo no usa mapa de sillas individuales) */
@@ -211,14 +284,17 @@ const Localidad: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idEspacio, tipo]);
 
-  /* Al volver a la página: resetear flag de pago y recargar estado real de asientos */
+  /* Al volver a la página: resetear flag de pago, recargar estado real de
+     asientos y arrancar el temporizador de 3 min + el refresco en vivo. */
   useIonViewWillEnter(() => {
     pagandoRef.current = false;
     cargarLocalidad(true);
+    iniciarTemporizadores();
   });
 
   /* ── Liberar asientos al salir (a menos que el usuario vaya a pagar) ── */
   useIonViewWillLeave(() => {
+    detenerTemporizadores();
     if (pagandoRef.current) return;
 
     const ud             = getUserData();
@@ -307,11 +383,14 @@ const Localidad: React.FC = () => {
     }
   };
 
-  /* ── Toggle unificado ── */
+  /* ── Toggle unificado ──
+     Un asiento "mío" (ya en `sel`) debe poder deseleccionarse aunque el
+     último refresco lo muestre como no-disponible (así lo devuelve la API
+     una vez reservado) — solo bloqueamos tomar asientos ajenos. */
   const toggle = async (item: SillaItem) => {
-    if (item.estado !== 'disponible') return;
-    if (procesando.has(item.idsilla)) return;
     const isSel = sel.some(s => s.idsilla === item.idsilla);
+    if (!isSel && item.estado !== 'disponible') return;
+    if (procesando.has(item.idsilla)) return;
     if (!isSel && sel.length >= MAX_SEL) return;
 
     setProcesando(p => new Set([...p, item.idsilla]));
@@ -357,15 +436,21 @@ const Localidad: React.FC = () => {
     }
   };
 
+  /* Un asiento "mío" siempre se ve como seleccionado (amarillo), aunque el
+     refresco en vivo ya lo devuelva como reservado — para todos los demás,
+     "reservado" (otra persona lo tiene apartado ahora mismo, puede que
+     todavía libere) se distingue de "ocupado/vendido" (definitivo). */
   const seatClass = (item: SillaItem) => {
-    if (item.estado !== 'disponible') return 'sc-ocp';
     if (sel.some(s => s.idsilla === item.idsilla)) return 'sc-sel';
-    return 'sc-disp';
+    if (item.estado === 'disponible') return 'sc-disp';
+    if (item.estado === 'reservado') return 'sc-res';
+    return 'sc-ocp';
   };
 
-  const bloqueada = (item: SillaItem) =>
-    item.estado !== 'disponible' ||
-    (sel.length >= MAX_SEL && !sel.some(s => s.idsilla === item.idsilla));
+  const bloqueada = (item: SillaItem) => {
+    if (sel.some(s => s.idsilla === item.idsilla)) return false;
+    return item.estado !== 'disponible' || sel.length >= MAX_SEL;
+  };
 
   const cantCarrito  = tipo === 'correlativo' ? cantidad : sel.length;
   const totalCarrito = cantCarrito * precio;
@@ -379,16 +464,33 @@ const Localidad: React.FC = () => {
               <IonIcon icon={chevronBackOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
-          <IonTitle>{nombre || 'Seleccionar asientos'}</IonTitle>
+          <IonTitle size="small">{nombre || 'Seleccionar asientos'}</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="loc-content">
 
+        <div className={`temporizador-chip ${segundosRestantes <= 30 ? 'temporizador-critico' : ''}`}>
+          <IonIcon icon={timeOutline} />
+          <span>Tienes {formatMMSS(segundosRestantes)} para completar tu selección</span>
+        </div>
+
         {st.mapaConcierto && (
           <div className="venue-map">
             <p className="venue-label">Mapa del lugar</p>
             <img src={st.mapaConcierto} alt="Mapa" className="venue-img" />
+          </div>
+        )}
+
+        {/* Se muestra para cualquier evento: si el admin subió una imagen de
+            bloques específica se usa esa, si no, cae al mismo mapa del lugar
+            de arriba (así el botón siempre está disponible). */}
+        {(imagenBloques || st.mapaConcierto) && (
+          <div className="venue-bloques">
+            <IonButton fill="outline" size="small" onClick={() => setShowBloques(true)}>
+              <IonIcon icon={gridOutline} slot="start" />
+              Ver bloques en el mapa
+            </IonButton>
           </div>
         )}
 
@@ -439,6 +541,7 @@ const Localidad: React.FC = () => {
                   <p className="corr-desc">Seleccione Boletos. Máx. {MAX_SEL}.</p>
                   <div className="legend">
                     <span className="leg l-disp">Disponible</span>
+                    <span className="leg l-res">Reservada</span>
                     <span className="leg l-ocp">Ocupada</span>
                     <span className="leg l-sel">Seleccionada</span>
                   </div>
@@ -576,6 +679,26 @@ const Localidad: React.FC = () => {
         color="danger"
         onDidDismiss={() => setToast('')}
       />
+
+      <IonModal isOpen={showBloques} onDidDismiss={() => setShowBloques(false)}
+        breakpoints={[0, 1]} initialBreakpoint={1}>
+        <IonHeader>
+          <IonToolbar className="loc-toolbar">
+            <IonTitle>División por bloques</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowBloques(false)}>
+                <IonIcon icon={closeOutline} slot="icon-only" />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="loc-content">
+          {(imagenBloques || st.mapaConcierto) && (
+            <img src={imagenBloques || st.mapaConcierto} alt="División por bloques"
+              style={{ width: '100%', display: 'block' }} />
+          )}
+        </IonContent>
+      </IonModal>
 
       <IonAlert
         isOpen={confirmarSalir}

@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonIcon, IonButton, IonButtons, IonItem, IonLabel,
   IonModal, IonInput, IonSpinner, IonToast, IonAlert,
+  IonActionSheet,
 } from '@ionic/react';
 import {
   mailOutline, callOutline, cardOutline,
   locationOutline, logOutOutline, logoWhatsapp,
   createOutline, alertCircleOutline, checkmarkCircleOutline,
+  cameraOutline, trashOutline,
 } from 'ionicons/icons';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import marcaTickets from '../images/MARCA_TICKETS.png';
 import { eliminarCredencialesBiometricas } from '../utils/biometricAuth';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
+import { obtenerImgSuscriptor, actualizarImgSuscriptor, subirImagenPerfil } from '../utils/imgSuscriptor';
 import './Perfil.css';
 
 interface UserData {
@@ -33,6 +37,69 @@ const Perfil: React.FC = () => {
   const history = useHistory();
   const [user, setUser]     = useState<UserData>(getUserData);
   const inicial             = user?.nombreCompleto?.charAt(0) ?? '?';
+
+  /* ── Foto de perfil ── */
+  const [imgSuscriptor, setImgSuscriptor] = useState<string | null>(null);
+  const [subiendoFoto, setSubiendoFoto]   = useState(false);
+  const [showFotoSheet, setShowFotoSheet] = useState(false);
+
+  useEffect(() => {
+    if (!user.cedula) return;
+    obtenerImgSuscriptor(user.cedula).then(setImgSuscriptor);
+  }, [user.cedula]);
+
+  /* Camera.getPhoto con source "Prompt" muestra el selector nativo de
+     Android (Cámara / Galería) y pide el permiso correspondiente solo si
+     aún no fue concedido — si ya se concedió antes, no vuelve a preguntar. */
+  const cambiarFotoPerfil = async () => {
+    setShowFotoSheet(false);
+    try {
+      const foto = await Camera.getPhoto({
+        quality: 80,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Prompt,
+        promptLabelHeader: 'Foto de perfil',
+        promptLabelPhoto: 'Elegir de galería',
+        promptLabelPicture: 'Tomar foto',
+      });
+      if (!foto.webPath) return;
+
+      setSubiendoFoto(true);
+      const blob = await (await fetch(foto.webPath)).blob();
+      const url = await subirImagenPerfil(blob, `perfil_${user.cedula}.jpg`);
+      if (!url) {
+        setToast('No se pudo subir la imagen.'); setToastColor('danger'); return;
+      }
+      const resp = await actualizarImgSuscriptor(user.cedula, url);
+      if (resp.success) {
+        setImgSuscriptor(url);
+        setToast('Foto de perfil actualizada.'); setToastColor('success');
+      } else {
+        setToast(resp.message ?? 'No se pudo guardar la imagen.'); setToastColor('danger');
+      }
+    } catch {
+      /* Usuario canceló el selector o el permiso fue denegado — no se
+         muestra error, es un flujo normal de cancelación. */
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
+  const quitarFotoPerfil = async () => {
+    setShowFotoSheet(false);
+    setSubiendoFoto(true);
+    try {
+      const resp = await actualizarImgSuscriptor(user.cedula, null);
+      if (resp.success) {
+        setImgSuscriptor(null);
+        setToast('Foto de perfil eliminada.'); setToastColor('success');
+      } else {
+        setToast(resp.message ?? 'No se pudo quitar la imagen.'); setToastColor('danger');
+      }
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
 
   /* ── Alert cerrar sesión ── */
   const [alertLogout, setAlertLogout] = useState(false);
@@ -116,8 +183,24 @@ const Perfil: React.FC = () => {
         </div>
 
         <div className="perfil-avatar-section">
-          <div className="avatar-circle">
-            <span className="avatar-inicial">{inicial}</span>
+          <div className="avatar-wrap">
+            <div className="avatar-circle">
+              {imgSuscriptor
+                ? <img src={imgSuscriptor} alt="Foto de perfil" className="avatar-img" />
+                : <span className="avatar-inicial">{inicial}</span>}
+              {subiendoFoto && (
+                <div className="avatar-loading"><IonSpinner name="crescent" /></div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="avatar-edit-btn"
+              onClick={() => setShowFotoSheet(true)}
+              disabled={subiendoFoto}
+              aria-label="Cambiar foto de perfil"
+            >
+              <IonIcon icon={cameraOutline} />
+            </button>
           </div>
           <h2 className="perfil-nombre">{user?.nombreCompleto ?? 'Usuario'}</h2>
           <p className="perfil-rol">Suscriptor</p>
@@ -185,6 +268,19 @@ const Perfil: React.FC = () => {
         </div>
 
       </IonContent>
+
+      <IonActionSheet
+        isOpen={showFotoSheet}
+        header="Foto de perfil"
+        onDidDismiss={() => setShowFotoSheet(false)}
+        buttons={[
+          { text: 'Cambiar foto', icon: cameraOutline, handler: cambiarFotoPerfil },
+          ...(imgSuscriptor
+            ? [{ text: 'Quitar foto', icon: trashOutline, role: 'destructive' as const, handler: quitarFotoPerfil }]
+            : []),
+          { text: 'Cancelar', role: 'cancel' as const },
+        ]}
+      />
 
       <IonAlert
         isOpen={alertLogout}
