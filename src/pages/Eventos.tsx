@@ -13,7 +13,6 @@ import {
   IonSpinner,
   IonText,
   IonModal,
-  IonPopover,
   IonBadge,
   IonAlert,
   IonToast,
@@ -36,6 +35,7 @@ import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import marcaTickets from '../images/MARCA_TICKETS.png';
+import EstadoError from '../components/EstadoError';
 import './Eventos.css';
 
 interface Localidad {
@@ -167,11 +167,13 @@ const Eventos: React.FC = () => {
   const [cargandoPrecios, setCargandoPrecios] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
 
-  /* Vista rápida de precios ("Ver precios") — un popover chico solo para
-     consultar, sin entrar al flujo de compra (eso lo hace "Comprar",
-     que abre el modal completo con selección de localidad). */
+  /* Vista rápida de precios ("Ver precios") — un modal chico tipo hoja
+     inferior, solo para consultar, sin entrar al flujo de compra (eso lo
+     hace "Comprar", que abre el modal completo con selección de localidad).
+     Es un modal (posición fija) y no un popover anclado al toque porque en
+     tarjetas cerca del final de la lista el popover se abría fuera de la
+     pantalla y no se veía. */
   const [popoverEvento, setPopoverEvento] = useState<Evento | null>(null);
-  const [popoverEventTarget, setPopoverEventTarget] = useState<Event | undefined>(undefined);
   const [popoverPrecios, setPopoverPrecios] = useState<Localidad[]>([]);
   const [cargandoPopover, setCargandoPopover] = useState(false);
 
@@ -219,7 +221,7 @@ const Eventos: React.FC = () => {
     }
   };
 
-  useEffect(() => { cargarEventos(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarEventos(); }, []);
 
   const abrirPrecios = async (evento: Evento) => {
     setEventoSeleccionado(evento);
@@ -253,7 +255,6 @@ const Eventos: React.FC = () => {
   const verPreciosRapido = async (e: React.MouseEvent, evento: Evento) => {
     e.stopPropagation();
     setPopoverEvento(evento);
-    setPopoverEventTarget(e.nativeEvent);
     setPopoverPrecios([]);
     setCargandoPopover(true);
     try {
@@ -270,7 +271,6 @@ const Eventos: React.FC = () => {
 
   const cerrarPopoverPrecios = () => {
     setPopoverEvento(null);
-    setPopoverEventTarget(undefined);
     setPopoverPrecios([]);
   };
 
@@ -335,7 +335,6 @@ const Eventos: React.FC = () => {
         setAvisoLink('No se pudo cargar el evento del enlace.');
       })
       .finally(() => { resolviendoLinkRef.current = false; });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargando, eventos, eventosProximos]);
 
   const eventosFiltrados = eventos.filter((ev) =>
@@ -389,9 +388,7 @@ const Eventos: React.FC = () => {
         )}
 
         {!cargando && error && (
-          <div className="error-state">
-            <IonText color="danger"><p>{error}</p></IonText>
-          </div>
+          <EstadoError onReintentar={cargarEventos} reintentando={cargando} />
         )}
 
         {!cargando && !error && (
@@ -472,15 +469,24 @@ const Eventos: React.FC = () => {
           </div>
         )}
 
-        {/* Popover chico de "Ver precios" — solo consulta, sin comprar */}
-        <IonPopover
+        {/* Vista rápida de "Ver precios" — modal tipo hoja inferior, solo
+            consulta, sin comprar. Posición fija (no anclada al toque) para
+            que siempre se vea completo sin importar en qué parte de la
+            lista se tocó "Ver precios". */}
+        <IonModal
           isOpen={!!popoverEvento}
-          event={popoverEventTarget}
           onDidDismiss={cerrarPopoverPrecios}
           className="precios-popover"
+          breakpoints={[0, 1]}
+          initialBreakpoint={1}
         >
           <div className="precios-popover-body">
-            <p className="pp-titulo">{popoverEvento?.nombreConcierto}</p>
+            <div className="pp-header">
+              <p className="pp-titulo">{popoverEvento?.nombreConcierto}</p>
+              <IonButton fill="clear" size="small" onClick={cerrarPopoverPrecios}>
+                <IonIcon icon={closeOutline} slot="icon-only" />
+              </IonButton>
+            </div>
 
             {cargandoPopover && (
               <div className="pp-cargando"><IonSpinner name="crescent" /></div>
@@ -501,7 +507,7 @@ const Eventos: React.FC = () => {
               </ul>
             )}
           </div>
-        </IonPopover>
+        </IonModal>
 
         {/* Modal de localidades y precios */}
         <IonModal isOpen={modalAbierto} onDidDismiss={cerrarModal} className="precios-modal">

@@ -15,9 +15,10 @@ import {
 } from 'ionicons/icons';
 import axios from 'axios';
 import { usePendientes } from '../context/PendientesContext';
-import { generarYCompartirFactura } from '../utils/factura';
+import { generarYDescargarFactura } from '../utils/factura';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
 import marcaTickets from '../images/MARCA_TICKETS.png';
+import EstadoError from '../components/EstadoError';
 import './Compras.css';
 
 const API_HDR = {
@@ -105,10 +106,12 @@ const Compras: React.FC = () => {
   /* ── Pendientes ── */
   const [pendientes, setPendientes]     = useState<Registro[]>([]);
   const [cargandoPend, setCargandoPend] = useState(false);
+  const [errorPend, setErrorPend]       = useState(false);
 
   /* ── Historial ── */
   const [historial, setHistorial]       = useState<Registro[]>([]);
   const [cargandoHist, setCargandoHist] = useState(false);
+  const [errorHist, setErrorHist]       = useState(false);
 
   /* ── Anular ── */
   const [alertAnular, setAlertAnular]   = useState(false);
@@ -149,6 +152,7 @@ const Compras: React.FC = () => {
   const cargarPendientes = async () => {
     if (!user.cedula) return;
     setCargandoPend(true);
+    setErrorPend(false);
     try {
       const { data } = await axios.post(
         `${URL_BASE}/listarRegistros?estado=Pendiente&init=0&size=50`,
@@ -156,13 +160,14 @@ const Compras: React.FC = () => {
         { headers: API_HDR }
       );
       setPendientes(data.success ? (data.data ?? []) : []);
-    } catch { setPendientes([]); }
+    } catch { setPendientes([]); setErrorPend(true); }
     finally { setCargandoPend(false); }
   };
 
   const cargarHistorial = async () => {
     if (!user.cedula) return;
     setCargandoHist(true);
+    setErrorHist(false);
     try {
       const { data } = await axios.post(
         `${URL_BASE}/listarRegistros?init=0&size=100`,
@@ -170,7 +175,7 @@ const Compras: React.FC = () => {
         { headers: API_HDR }
       );
       setHistorial(data.success ? (data.data ?? []) : []);
-    } catch { setHistorial([]); }
+    } catch { setHistorial([]); setErrorHist(true); }
     finally { setCargandoHist(false); }
   };
 
@@ -352,7 +357,7 @@ const Compras: React.FC = () => {
     setGenerandoFacturaId(reg.id);
     try {
       const infoTarjeta = reg.forma_pago === 'Tarjeta' ? await obtenerInfoTarjeta(reg) : undefined;
-      const resultado = await generarYCompartirFactura({
+      const resultado = await generarYDescargarFactura({
         id:              reg.id,
         nombreConcierto: nombreConcierto(reg),
         localidades:     (reg.info_concierto ?? []).map(c => ({ nombre: c.localidad_nombre, cantidad: c.cantidad })),
@@ -365,7 +370,8 @@ const Compras: React.FC = () => {
         numeroComprobante: reg.numerTransacion || undefined,
         infoTarjeta,
       });
-      if (!resultado.ok) showToast(resultado.mensaje || 'No se pudo generar el comprobante.', 'danger');
+      if (resultado.ok) showToast('Comprobante descargado.', 'success');
+      else showToast(resultado.mensaje || 'No se pudo generar el comprobante.', 'danger');
     } finally {
       setGenerandoFacturaId(null);
     }
@@ -490,7 +496,11 @@ const Compras: React.FC = () => {
           <div className="comp-loading"><IonSpinner name="crescent" /></div>
         )}
 
-        {!cargandoPend && pendientes.length === 0 && (
+        {!cargandoPend && errorPend && (
+          <EstadoError onReintentar={cargarPendientes} reintentando={cargandoPend} />
+        )}
+
+        {!cargandoPend && !errorPend && pendientes.length === 0 && (
           <div className="comp-empty">
             <IonIcon icon={checkmarkCircleOutline} className="comp-empty-icon" />
             <p>Sin compras pendientes</p>
@@ -507,7 +517,10 @@ const Compras: React.FC = () => {
         {cargandoHist && (
           <div className="comp-loading"><IonSpinner name="crescent" /></div>
         )}
-        {!cargandoHist && historial.length === 0 && (
+        {!cargandoHist && errorHist && (
+          <EstadoError onReintentar={cargarHistorial} reintentando={cargandoHist} />
+        )}
+        {!cargandoHist && !errorHist && historial.length === 0 && (
           <div className="comp-empty"><p>Sin registros de compras.</p></div>
         )}
         {!cargandoHist && historial.map(reg => (

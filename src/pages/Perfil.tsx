@@ -183,6 +183,13 @@ const Perfil: React.FC = () => {
         </div>
 
         <div className="perfil-avatar-section">
+          {imgSuscriptor && (
+            <div
+              className="perfil-avatar-cover"
+              style={{ backgroundImage: `url(${imgSuscriptor})` }}
+              aria-hidden="true"
+            />
+          )}
           <div className="avatar-wrap">
             <div className="avatar-circle">
               {imgSuscriptor

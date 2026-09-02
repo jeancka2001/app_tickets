@@ -14,6 +14,17 @@ const FLAG_BIOMETRIA_ACTIVA = 'biometriaActiva';
 export const biometriaActivaLocalmente = (): boolean =>
   localStorage.getItem(FLAG_BIOMETRIA_ACTIVA) === '1';
 
+/* Si este dispositivo ya demostró (con reintento incluido, ver más abajo)
+   que no puede cifrar/guardar credenciales por huella -- bug de Keystore
+   propio del fabricante (confirmado en Xiaomi/Oppo por el propio plugin,
+   y también visto en Infinix) -- se deja de insistir en cada login para
+   no repetir el mismo aviso una y otra vez. El login normal (usuario y
+   contraseña) nunca depende de esto ni se ve afectado. */
+const FLAG_GUARDADO_NO_SOPORTADO = 'biometriaGuardadoNoSoportado';
+
+export const guardadoBiometricoNoSoportado = (): boolean =>
+  localStorage.getItem(FLAG_GUARDADO_NO_SOPORTADO) === '1';
+
 export const biometriaDisponible = async (): Promise<boolean> => {
   try {
     const r = await NativeBiometric.isAvailable({ useFallback: false });
@@ -48,6 +59,7 @@ export interface ResultadoGuardadoBiometrico {
 const CODIGOS_SIN_AVISO = new Set(['11', '15', '16', '17']); // APP/SYSTEM/USER cancel, USER_FALLBACK
 
 const MENSAJES_ERROR_BIOMETRIA: Record<string, string> = {
+  '0': 'No se pudo proteger tu acceso con huella en este dispositivo (posible cambio reciente en las huellas registradas del teléfono). Intenta cerrar la app por completo y vuelve a intentarlo la próxima vez que inicies sesión.',
   '1': 'Este dispositivo no tiene sensor de huella disponible.',
   '2': 'El sensor de huella quedó bloqueado por intentos fallidos. Desbloquea tu teléfono con tu PIN o patrón e inténtalo de nuevo la próxima vez.',
   '3': 'No tienes ninguna huella configurada en este dispositivo. Actívala en Ajustes para poder usarla aquí.',
@@ -64,11 +76,29 @@ const describirErrorGuardado = (e: unknown): ResultadoGuardadoBiometrico => {
   return { ok: false, mensaje };
 };
 
+/* authValidityDuration>0 cambia el modo de la clave del Keystore: en vez de
+   atar el cifrado al instante exacto de la huella (CryptoObject "por
+   operación"), la huella desbloquea la clave por esta cantidad de segundos.
+   Confirmado con un dispositivo real (Infinix/Android 14): el modo "por
+   operación" falla ahí con KEY_USER_NOT_AUTHENTICATED — un bug conocido del
+   Keystore2 (Android 12+) al atar la operación criptográfica al CryptoObject,
+   no un problema del sensor de huella (por eso apps como los bancos, que no
+   usan ese mismo patrón estricto, sí funcionan en el mismo teléfono). Una
+   ventana corta es el mismo patrón que usa la mayoría de apps — la huella
+   sigue siendo obligatoria, solo que el cifrado no depende del enlace
+   milimétrico al CryptoObject que falla en algunos dispositivos. */
+const VENTANA_VALIDEZ_HUELLA_SEG = 30;
+
 /* Guarda usuario/contraseña protegidos por huella (Android Keystore / iOS Keychain).
-   No se guarda nada en localStorage: solo vive en el almacenamiento seguro del OS. */
+   No se guarda nada en localStorage: solo vive en el almacenamiento seguro del OS.
+
+   reintentando=true en la segunda llamada evita un loop infinito. Sigue
+   existiendo como respaldo por si el fallo es otra cosa (p.ej. una clave
+   vieja en mal estado), pero el fix real es authValidityDuration de abajo. */
 export const guardarCredencialesBiometricas = async (
   usuario: string,
-  contrasena: string
+  contrasena: string,
+  reintentando = false
 ): Promise<ResultadoGuardadoBiometrico> => {
   try {
     await NativeBiometric.setCredentials({
@@ -76,19 +106,28 @@ export const guardarCredencialesBiometricas = async (
       password: contrasena,
       server: SERVER,
       accessControl: AccessControl.BIOMETRY_ANY,
+      authValidityDuration: VENTANA_VALIDEZ_HUELLA_SEG,
       title: 'Proteger inicio de sesión',
     });
     localStorage.setItem(FLAG_BIOMETRIA_ACTIVA, '1');
-    console.log('[biometria] setCredentials OK');
+    console.log('[biometria] setCredentials OK' + (reintentando ? ' (reintento)' : ''));
     return { ok: true, mensaje: '' };
   } catch (e) {
-    console.warn('[biometria] setCredentials falló', e);
+    console.warn('[biometria] setCredentials falló' + (reintentando ? ' (reintento)' : ''), e);
+    if (!reintentando) {
+      try { await NativeBiometric.deleteCredentials({ server: SERVER }); } catch { /* no había nada que borrar */ }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return guardarCredencialesBiometricas(usuario, contrasena, true);
+    }
+    // Falló también el reintento: no es un bache pasajero, es del dispositivo.
+    localStorage.setItem(FLAG_GUARDADO_NO_SOPORTADO, '1');
     return describirErrorGuardado(e);
   }
 };
 
 export const eliminarCredencialesBiometricas = async (): Promise<void> => {
   localStorage.removeItem(FLAG_BIOMETRIA_ACTIVA);
+  localStorage.removeItem(FLAG_GUARDADO_NO_SOPORTADO);
   try {
     await NativeBiometric.deleteCredentials({ server: SERVER });
   } catch (e) {

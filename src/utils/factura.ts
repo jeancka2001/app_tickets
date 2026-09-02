@@ -1,13 +1,13 @@
 import { jsPDF } from 'jspdf';
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 
 /* Genera un comprobante de compra en PDF (no es la factura electrónica del
    SRI, es un resumen de la orden para el cliente) — mismo formato y misma
    fuente de datos que el botón de la impresora en el detalle de la orden
-   en la web (VenderTiket.js/Aprobar/Detalleregistro.js -> generaComprobante),
-   entregado mediante la hoja nativa de "Compartir/Guardar" de Android en
-   vez de abrir una pestaña nueva como hace la web. */
+   en la web (VenderTiket.js/Aprobar/Detalleregistro.js -> generaComprobante).
+   Se guarda directo en el almacenamiento del teléfono (no abre la hoja de
+   compartir) — para compartir el boleto en sí ya existe el botón dedicado
+   en Boletos.tsx. */
 
 export interface LocalidadFactura {
   nombre: string;
@@ -54,7 +54,7 @@ const fechaImpresion = (): string => {
   return `${dosDigitos(d.getDate())}/${dosDigitos(d.getMonth() + 1)}/${d.getFullYear()}, ${dosDigitos(d.getHours())}:${dosDigitos(d.getMinutes())}:${dosDigitos(d.getSeconds())}`;
 };
 
-export const generarYCompartirFactura = async (
+export const generarYDescargarFactura = async (
   d: DatosFactura
 ): Promise<{ ok: boolean; mensaje?: string }> => {
   try {
@@ -147,22 +147,21 @@ export const generarYCompartirFactura = async (
     const base64 = dataUri.split('base64,')[1];
     const nombreArchivo = `comprobante_tickets_${d.id}.pdf`;
 
+    /* Directory.Documents = carpeta propia de la app en el almacenamiento
+       externo (Android/data/ec.ticketsEC.app/files/Documents), visible
+       desde cualquier explorador de archivos del teléfono — a diferencia
+       de Directory.Cache (que usan las funciones de "compartir" y que el
+       sistema puede limpiar en cualquier momento), este archivo queda
+       guardado de forma permanente sin pedir permisos de almacenamiento. */
     await Filesystem.writeFile({
       path: nombreArchivo,
       data: base64,
-      directory: Directory.Cache,
-    });
-    const { uri } = await Filesystem.getUri({ path: nombreArchivo, directory: Directory.Cache });
-
-    await Share.share({
-      title: `Comprobante de compra #${d.id}`,
-      dialogTitle: 'Guardar o compartir comprobante',
-      files: [uri],
+      directory: Directory.Documents,
     });
 
     return { ok: true };
   } catch (e) {
-    console.warn('[factura] no se pudo generar/compartir', e);
+    console.warn('[factura] no se pudo generar/descargar', e);
     return { ok: false, mensaje: 'No se pudo generar el comprobante. Intenta de nuevo.' };
   }
 };

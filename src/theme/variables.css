@@ -20,7 +20,10 @@ http://ionicframework.com/docs/theming/ */
   display: block;
 }
 @media (prefers-color-scheme: dark) {
-  .page-watermark { opacity: 0.14; filter: brightness(6); }
+  /* Antes tenía filter: brightness(6) -- multiplicar el brillo x6 saturaba
+     casi todo el logo a blanco puro (ya tiene bastante color propio: azul,
+     texto blanco, anillo naranja) y solo se veía la silueta del círculo. */
+  .page-watermark { opacity: 0.18; }
 }
 
 /* Logo en toolbar – compartido por todas las páginas */

@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IonContent,
   IonPage,
   IonInput,
   IonInputPasswordToggle,
   IonButton,
-  IonText,
   IonToast,
   IonCheckbox,
   IonIcon,
   IonSpinner,
+  IonAlert,
 } from '@ionic/react';
-import { fingerPrintOutline } from 'ionicons/icons';
+import { fingerPrintOutline, personAddOutline, logInOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import marcaTickets from '../images/MARCA_TICKETS.png';
 import './Home.css';
@@ -21,6 +21,7 @@ import {
   hayCredencialesGuardadas,
   guardarCredencialesBiometricas,
   obtenerCredencialesBiometricas,
+  guardadoBiometricoNoSoportado,
 } from '../utils/biometricAuth';
 import { useAppLock } from '../context/AppLockContext';
 import { inicializarNotificaciones } from '../utils/pushNotifications';
@@ -36,10 +37,44 @@ const Home: React.FC = () => {
   const history = useHistory();
   const { unlock } = useAppLock();
 
-  /* ── Huella digital ── */
+  /* ── Huella digital ──
+     Nada automático: la huella solo se pide si el cliente toca el botón
+     "Huella" (debajo de usuario/contraseña) o si guarda una nueva sesión.
+     Un intento automático al abrir la pantalla era poco predecible (a veces
+     fallaba en frío, antes de que el sensor estuviera listo) y terminaba
+     en mensajes de error confusos sin que el cliente hubiera hecho nada. */
   const [biometriaLista, setBiometriaLista] = useState(false);
   const [verificandoHuella, setVerificandoHuella] = useState(false);
-  const autoIntentado = useRef(false);
+  /* Credenciales recién validadas contra el servidor, en espera de que el
+     cliente confirme si quiere reemplazar la huella ya guardada en este
+     dispositivo (solo aplica a login manual con usuario/contraseña). */
+  const [confirmarReemplazo, setConfirmarReemplazo] = useState<{ usuario: string; contrasena: string } | null>(null);
+
+  /* ── Pantalla de carga tras iniciar sesión ──
+     Un par de segundos con el logo mientras se prepara todo, en vez de
+     saltar directo al dashboard — se ve más cuidado y disimula la primera
+     carga real de eventos que hace la pestaña de Eventos al entrar. */
+  const DURACION_CARGA_MS = 2000;
+  const MENSAJES_CARGA = ['Preparando tu cuenta…', 'Cargando tus eventos…', '¡Ya casi estamos!'];
+  const [mostrandoCarga, setMostrandoCarga] = useState(false);
+  const [mensajeCargaIdx, setMensajeCargaIdx] = useState(0);
+
+  useEffect(() => {
+    if (!mostrandoCarga) { setMensajeCargaIdx(0); return; }
+    const intervalo = setInterval(() => {
+      setMensajeCargaIdx(i => (i + 1) % MENSAJES_CARGA.length);
+    }, 900);
+    return () => clearInterval(intervalo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mostrandoCarga]);
+
+  const finalizarLogin = (esperarMs: number) => {
+    inicializarNotificaciones();
+    unlock();
+    setMostrandoCarga(true);
+    const espera = Math.max(esperarMs, DURACION_CARGA_MS);
+    setTimeout(() => history.replace('/dashboard'), espera);
+  };
 
   const loginConCredenciales = async (usuarioIn: string, contrasenaIn: string, guardar: boolean) => {
     setCargando(true);
@@ -57,18 +92,25 @@ const Home: React.FC = () => {
       );
       if (data.success == true && data.data) {
         localStorage.setItem('userData', JSON.stringify(data.data));
-        let esperarAviso = 0;
-        if (guardar) {
+
+        if (guardar && !guardadoBiometricoNoSoportado()) {
+          const yaHabiaGuardada = await hayCredencialesGuardadas();
+          if (yaHabiaGuardada) {
+            /* Ya hay una cuenta con huella guardada en este teléfono — no se
+               sobreescribe sin preguntar (podría ser la de otra persona que
+               comparte el dispositivo). La alerta de abajo decide cómo sigue. */
+            setConfirmarReemplazo({ usuario: usuarioIn, contrasena: contrasenaIn });
+            return;
+          }
+          // Primera vez en este dispositivo: se guarda directo, sin preguntar.
           const resultado = await guardarCredencialesBiometricas(usuarioIn, contrasenaIn);
           if (!resultado.ok && resultado.mensaje) {
             setAvisoHuella(resultado.mensaje);
-            esperarAviso = 2600; // deja ver el aviso antes de salir de esta pantalla
+            finalizarLogin(2600); // deja ver el aviso antes de salir de esta pantalla
+            return;
           }
         }
-        inicializarNotificaciones();
-        unlock();
-        if (esperarAviso) setTimeout(() => history.replace('/dashboard'), esperarAviso);
-        else history.replace('/dashboard');
+        finalizarLogin(0);
       } else {
         setError('Credenciales incorrectas');
       }
@@ -92,25 +134,44 @@ const Home: React.FC = () => {
     setError('');
     try {
       const creds = await obtenerCredencialesBiometricas();
-      if (creds) await loginConCredenciales(creds.usuario, creds.contrasena, true);
+      /* guardar=false: estas credenciales ya vienen del almacenamiento seguro
+         del teléfono (por eso pudimos leerlas con la huella) — no hay nada
+         nuevo que guardar. */
+      if (creds) await loginConCredenciales(creds.usuario, creds.contrasena, false);
     } finally {
       setVerificandoHuella(false);
     }
   };
 
-  /* Si ya se guardó un inicio de sesión con huella en este dispositivo,
-     ofrecer (y disparar automáticamente) el desbloqueo por huella al abrir la app. */
+  /* Sí quiere reemplazar la huella guardada: guarda las nuevas credenciales
+     (pisando las anteriores) y recién ahí entra. */
+  const confirmarReemplazoSi = async () => {
+    if (!confirmarReemplazo) return;
+    const { usuario: u, contrasena: c } = confirmarReemplazo;
+    setConfirmarReemplazo(null);
+    const resultado = await guardarCredencialesBiometricas(u, c);
+    if (!resultado.ok && resultado.mensaje) {
+      setAvisoHuella(resultado.mensaje);
+      finalizarLogin(2600);
+    } else {
+      finalizarLogin(0);
+    }
+  };
+
+  /* No quiere reemplazarla: la huella guardada anteriormente se queda tal
+     cual, y esta cuenta entra normal, sin guardarse para huella. */
+  const confirmarReemplazoNo = () => {
+    setConfirmarReemplazo(null);
+    finalizarLogin(0);
+  };
+
+  /* Solo determina si mostrar el botón "Huella" — no dispara nada solo. */
   useEffect(() => {
     (async () => {
       const disponible = await biometriaDisponible();
       const guardado = disponible && (await hayCredencialesGuardadas());
       setBiometriaLista(guardado);
-      if (guardado && !autoIntentado.current) {
-        autoIntentado.current = true;
-        ingresarConHuella();
-      }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -124,21 +185,6 @@ const Home: React.FC = () => {
           <div className="form-card">
             <h2 className="form-title">Iniciar Sesión</h2>
 
-            {biometriaLista && (
-              <IonButton
-                expand="block"
-                fill="outline"
-                className="btn-huella"
-                onClick={ingresarConHuella}
-                disabled={verificandoHuella || cargando}
-              >
-                {verificandoHuella
-                  ? <><IonSpinner name="crescent" className="btn-spinner" /> Verificando…</>
-                  : <><IonIcon icon={fingerPrintOutline} slot="start" /> Ingresar con huella</>
-                }
-              </IonButton>
-            )}
-
             <IonInput
               className="login-input"
               label="Usuario"
@@ -147,7 +193,7 @@ const Home: React.FC = () => {
               type="text"
               autocomplete="username"
               value={usuario}
-              onIonChange={(e) => setUsuario(e.detail.value!)}
+              onIonInput={(e) => setUsuario(e.detail.value!)}
             />
 
             <IonInput
@@ -158,7 +204,7 @@ const Home: React.FC = () => {
               type="password"
               autocomplete="current-password"
               value={contrasena}
-              onIonChange={(e) => setContrasena(e.detail.value!)}
+              onIonInput={(e) => setContrasena(e.detail.value!)}
             >
               <IonInputPasswordToggle slot="end" />
             </IonInput>
@@ -171,21 +217,39 @@ const Home: React.FC = () => {
               Guardar sesión
             </IonCheckbox>
 
-            <IonButton
-              expand="block"
-              className="btn-login"
-              onClick={iniciarSesion}
-              disabled={cargando}
-            >
-              {cargando ? 'Ingresando...' : 'Iniciar Sesión'}
-            </IonButton>
+            <div className="acciones-row">
+              <IonButton fill="outline" className="btn-cuadrado" routerLink="/register">
+                <div className="btn-cuadrado-inner">
+                  <IonIcon icon={personAddOutline} />
+                  <span>Crear cuenta</span>
+                </div>
+              </IonButton>
 
-            <div className="register-row">
-              <IonText color="medium" className="register-text">
-                ¿No tienes cuenta?
-              </IonText>
-              <IonButton fill="clear" size="small" routerLink="/register" className="btn-crear">
-                Crear cuenta
+              {biometriaLista && (
+                <IonButton
+                  fill="outline"
+                  className="btn-cuadrado"
+                  onClick={ingresarConHuella}
+                  disabled={verificandoHuella || cargando}
+                >
+                  <div className="btn-cuadrado-inner">
+                    {verificandoHuella
+                      ? <IonSpinner name="crescent" />
+                      : <IonIcon icon={fingerPrintOutline} />}
+                    <span>{verificandoHuella ? 'Verificando…' : 'Huella'}</span>
+                  </div>
+                </IonButton>
+              )}
+
+              <IonButton
+                className="btn-cuadrado btn-cuadrado-primary"
+                onClick={iniciarSesion}
+                disabled={cargando}
+              >
+                <div className="btn-cuadrado-inner">
+                  <IonIcon icon={logInOutline} />
+                  <span>{cargando ? 'Ingresando…' : 'Iniciar Sesión'}</span>
+                </div>
               </IonButton>
             </div>
           </div>
@@ -208,6 +272,25 @@ const Home: React.FC = () => {
           position="top"
           onDidDismiss={() => setAvisoHuella('')}
         />
+
+        <IonAlert
+          isOpen={!!confirmarReemplazo}
+          header="¿Reemplazar sesión guardada?"
+          message="Ya hay una cuenta guardada con huella en este dispositivo. Si continúas, se reemplazará por esta cuenta."
+          buttons={[
+            { text: 'No, mantener la anterior', role: 'cancel', handler: confirmarReemplazoNo },
+            { text: 'Sí, reemplazar', role: 'destructive', handler: confirmarReemplazoSi },
+          ]}
+          onDidDismiss={() => setConfirmarReemplazo(null)}
+        />
+
+        {mostrandoCarga && (
+          <div className="loading-overlay">
+            <img src={marcaTickets} alt="T-ickets" className="loading-logo" />
+            <IonSpinner name="crescent" className="loading-spinner" />
+            <p key={mensajeCargaIdx} className="loading-texto">{MENSAJES_CARGA[mensajeCargaIdx]}</p>
+          </div>
+        )}
       </IonContent>
     </IonPage>
   );

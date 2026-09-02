@@ -502,19 +502,6 @@ const Localidad: React.FC = () => {
 
         {!cargando && localidad && (
           <>
-            <div className="res-row">
-              {/* <div className="res-chip ch-total">
-                <b>{localidad.resumen.total}</b><small>Total</small>
-              </div>
-              <div className="res-chip ch-disp">
-                <b>{localidad.resumen.disponibles}</b><small>Disponibles</small>
-              </div>
-              <div className="res-chip ch-ocp">
-                <b>{localidad.resumen.ocupadas}</b><small>Ocupadas</small>
-              </div> */}
-            </div>
-            
-
             {/* ── CORRELATIVO ── */}
             {tipo === 'correlativo' && (
               <div className="corr-view">

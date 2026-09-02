@@ -7,8 +7,8 @@ android {
         applicationId "ec.ticketsEC.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 12
+        versionName "1.1.1.12"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,6 +20,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            ndk {
+                // Hace que Gradle empaquete los símbolos de depuración nativa
+                // dentro del .aab automáticamente -- resuelve la advertencia
+                // de Play Console sin tener que subir nada a mano.
+                debugSymbolLevel 'FULL'
+            }
         }
     }
 }

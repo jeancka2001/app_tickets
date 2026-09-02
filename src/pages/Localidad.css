@@ -50,21 +50,6 @@
 }
 .loc-loading ion-spinner { color: #2d358c; }
 
-/* ── Resumen chips ────────────────────────────────────────── */
-.res-row { display: flex; gap: 8px; padding: 12px 14px; }
-.res-chip {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 8px 4px; border-radius: 10px; gap: 1px;
-}
-.res-chip b  { font-size: 1.1rem; font-weight: 800; line-height: 1; }
-.res-chip small {
-  font-size: 0.58rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.3px;
-}
-.ch-total { background: #eef0fb; color: #2d358c; }
-.ch-disp  { background: #d4f1dd; color: #155724; }
-.ch-ocp   { background: #fde8e8; color: #7f1d1d; }
-
 /* ── CORRELATIVO ──────────────────────────────────────────── */
 .corr-view {
   display: flex; flex-direction: column; align-items: center;
@@ -262,10 +247,6 @@
 
   .loc-loading    { color: #6b7a90; }
   .loc-loading ion-spinner { color: #7b8fdc; }
-
-  .ch-total { background: #1e2540; color: #7b8fdc; }
-  .ch-disp  { background: #0e2a18; color: #4ade80; }
-  .ch-ocp   { background: #2a0e0e; color: #f87171; }
 
   .corr-view {
     background: #1a2035;

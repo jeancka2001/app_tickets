@@ -104,3 +104,30 @@
   line-height: 1.5;
   margin: 0;
 }
+
+@media (prefers-color-scheme: dark) {
+  .register-content { --background: #101624; }
+
+  .register-title    { color: #e8ecf5; }
+  .register-subtitle { color: #9da5b4; }
+
+  .register-input {
+    --color: #e8ecf5;
+    --placeholder-color: #6b7a90;
+    --background: #222840;
+  }
+
+  .register-hint { color: #6b7a90; }
+
+  .register-error {
+    background: #2a0e0e;
+    color: #f87171;
+  }
+
+  .register-login-link { color: #9da5b4; }
+  .register-login-link span { color: #7b8fdc; }
+
+  .success-icon { color: #4ade80; }
+  .register-success h2 { color: #e8ecf5; }
+  .register-success p  { color: #9da5b4; }
+}

@@ -202,6 +202,28 @@
   margin: 20px 0 8px;
 }
 
+.btn-compartir-card {
+  --border-radius: 8px;
+  --color: #27ae60;
+  --border-color: #27ae60;
+  font-weight: 600;
+  font-size: 0.78rem;
+  height: 30px;
+  margin: 0;
+  --padding-start: 10px;
+  --padding-end: 10px;
+}
+
+.btn-compartir-modal {
+  --border-radius: 12px;
+  --color: #27ae60;
+  --border-color: #27ae60;
+  font-weight: 600;
+  font-size: 0.95rem;
+  height: 50px;
+  margin: 0 0 8px;
+}
+
 /* Modal */
 .modal-toolbar {
   --background: #2d358c;
@@ -238,6 +260,28 @@
   height: 220px;
   border-radius: 8px;
   margin-bottom: 12px;
+}
+
+.qr-aviso { padding: 28px 20px; }
+.qr-aviso-icon {
+  font-size: 2.6rem;
+  color: #2d358c;
+  margin-bottom: 10px;
+}
+.qr-aviso-texto {
+  font-size: 0.88rem;
+  color: #6b7a90;
+  text-align: center;
+  max-width: 30ch;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+.qr-aviso-btn {
+  --background: #2d358c;
+  --border-radius: 10px;
+  --color: #ffffff;
+  font-weight: 600;
+  margin: 0;
 }
 
 .qr-codigo {
@@ -372,10 +416,18 @@
     --border-color: #7b8fdc;
   }
 
+  .btn-compartir-card,
+  .btn-compartir-modal {
+    --color: #4ade80;
+    --border-color: #4ade80;
+  }
+
   .qr-container {
     background: #1a2035;
     box-shadow: 0 3px 12px rgba(0,0,0,.4);
   }
+  .qr-aviso-icon  { color: #7b8fdc; }
+  .qr-aviso-texto { color: #9da5b4; }
   .qr-codigo {
     color: #7b8fdc;
     background: #1e2540;

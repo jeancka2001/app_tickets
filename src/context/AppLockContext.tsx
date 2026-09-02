@@ -12,7 +12,7 @@ const AppLockContext = createContext<AppLockCtx>({ locked: false, unlock: () => 
 /* Si la app estuvo en segundo plano menos de este tiempo, se reanuda directo
    sin volver a pedir huella (evita fricción al solo cambiar de app un momento).
    Si estuvo más tiempo (o el proceso se reinició), se vuelve a pedir. */
-const TOLERANCIA_SEGUNDO_PLANO_MS = 2 * 60 * 1000; // 2 minutos
+const TOLERANCIA_SEGUNDO_PLANO_MS = 30 * 1000; // 30 segundos
 
 /* Bloquea la app con huella (estilo banco) cada vez que vuelve a primer plano
    tras estar más de TOLERANCIA_SEGUNDO_PLANO_MS en segundo plano, siempre que

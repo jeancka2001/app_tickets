@@ -178,17 +178,30 @@
   color: #2d358c;
 }
 
-/* ── Popover "Ver precios" ────────────────────────────────── */
-.precios-popover { --width: 260px; }
+/* ── "Ver precios" (hoja inferior) ───────────────────────────
+   Modal de posición fija en vez de popover anclado al toque: con la lista
+   larga de eventos, un popover anclado al punto exacto donde se tocó
+   "Ver precios" se salía de la pantalla en tarjetas cerca del final. */
+.precios-popover { --border-radius: 16px 16px 0 0; }
 
-.precios-popover-body { padding: 12px 14px; }
+.precios-popover-body {
+  padding: 6px 18px calc(18px + env(safe-area-inset-bottom));
+}
+
+.pp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
 
 .pp-titulo {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1a1e52;
-  margin: 0 0 8px;
-  line-height: 1.25;
+  margin: 0;
+  line-height: 1.3;
 }
 
 .pp-cargando { display: flex; justify-content: center; padding: 10px 0; }
@@ -202,13 +215,13 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  padding: 5px 0;
+  padding: 9px 0;
   border-bottom: 1px solid #f0f2f8;
 }
 .pp-item:last-child { border-bottom: none; }
 
-.pp-nombre { font-size: 0.8rem; color: #3a4258; }
-.pp-precio { font-size: 0.85rem; font-weight: 700; color: #2d358c; flex-shrink: 0; }
+.pp-nombre { font-size: 0.88rem; color: #3a4258; }
+.pp-precio { font-size: 0.95rem; font-weight: 700; color: #2d358c; flex-shrink: 0; }
 
 @media (prefers-color-scheme: dark) {
   .pp-titulo  { color: #e8ecf5; }

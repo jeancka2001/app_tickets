@@ -61,53 +61,67 @@
   --border-color-checked: #2d358c;
 }
 
-.btn-huella {
-  --border-radius: 10px;
-  --border-color: #2d358c;
-  --color: #2d358c;
-  font-weight: 600;
-  height: 46px;
-  margin-bottom: 18px;
-}
-
 .btn-spinner {
   width: 18px;
   height: 18px;
   margin-right: 6px;
 }
 
-.btn-login {
+/* ── Fila de acciones: Crear cuenta / Huella / Iniciar sesión ──
+   Botones "medio cuadrados" (poco redondeados, icono arriba + texto abajo,
+   ancho parejo) en vez de la pila de botones full-width de antes. */
+.acciones-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-cuadrado {
+  flex: 1;
+  min-width: 0;
+  height: 72px;
+  margin: 0;
+  --border-radius: 14px;
+  --border-color: #2d358c;
+  --color: #2d358c;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Ionic mete el contenido del botón en un span interno con flex-row fijo
+   (no expuesto como shadow-part), así que en vez de pelear con eso se usa
+   un contenedor propio adentro con su propio flex-column. */
+.btn-cuadrado-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.btn-cuadrado ion-icon,
+.btn-cuadrado ion-spinner {
+  font-size: 1.35rem;
+  width: 20px;
+  height: 20px;
+}
+
+.btn-cuadrado-inner span {
+  display: block;
+  text-align: center;
+}
+
+.btn-cuadrado-primary {
   --background: #2d358c;
   --background-activated: #1a1e52;
   --background-hover: #3d45b0;
-  --border-radius: 10px;
   --color: #ffffff;
-  font-weight: 600;
-  font-size: 1rem;
-  height: 50px;
-  margin-top: 24px;
-  margin-bottom: 0;
-}
-
-.register-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 16px;
-  gap: 2px;
-}
-
-.register-text {
-  font-size: 0.875rem;
-}
-
-.btn-crear {
-  --color: #2d358c;
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin: 0;
-  --padding-start: 6px;
-  --padding-end: 6px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -121,8 +135,62 @@
     --placeholder-color: #6b7a90;
     --background: #222840;
   }
-  .register-text { color: #9da5b4; }
-  .btn-crear { --color: #7b8fdc; }
   .login-checkbox { color: #9da5b4; }
-  .btn-huella { --border-color: #7b8fdc; --color: #7b8fdc; }
+  .btn-cuadrado { --border-color: #7b8fdc; --color: #7b8fdc; }
+  .btn-cuadrado-primary { --color: #ffffff; }
+}
+
+/* ── Pantalla de carga tras iniciar sesión ──
+   Mismo gradiente de marca que el fondo de login — sin variante de modo
+   oscuro a propósito, es una pantalla de transición corta y con identidad
+   propia (igual que el resto del login-content). */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: linear-gradient(160deg, #1a1e52 0%, #1b2a4a 50%, #2d358c 100%);
+}
+
+.loading-logo {
+  width: 130px;
+  max-width: 40vw;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
+  animation: loading-pulso 1.6s ease-in-out infinite;
+}
+
+.loading-spinner {
+  --color: #ffffff;
+  width: 30px;
+  height: 30px;
+}
+
+.loading-texto {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  margin: 0;
+  text-align: center;
+  padding: 0 24px;
+  animation: loading-aparece 0.35s ease-out;
+}
+
+@keyframes loading-pulso {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+@keyframes loading-aparece {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-logo, .loading-texto { animation: none; }
 }
