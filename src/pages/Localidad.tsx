@@ -9,6 +9,7 @@ import { addOutline, removeOutline, cartOutline, chevronBackOutline, gridOutline
 import axios from 'axios';
 import { obtenerConfiguracionLocalidad, obtenerMapaLocalidad, claseAlineacion, enOrdenVisual } from '../utils/localidadConfig';
 import { MS_LOGIN_AUTH_HEADERS } from '../utils/msLoginAuth';
+import ZoomableImage from '../components/ZoomableImage';
 import './Localidad.css';
 
 const MAX_SEL = 10;
@@ -679,10 +680,9 @@ const Localidad: React.FC = () => {
             </IonButtons>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="loc-content">
+        <IonContent className="loc-content" scrollY={false}>
           {(imagenBloques || st.mapaConcierto) && (
-            <img src={imagenBloques || st.mapaConcierto} alt="División por bloques"
-              style={{ width: '100%', display: 'block' }} />
+            <ZoomableImage src={imagenBloques || st.mapaConcierto || ''} alt="División por bloques" />
           )}
         </IonContent>
       </IonModal>
