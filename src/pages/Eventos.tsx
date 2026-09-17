@@ -203,8 +203,8 @@ const Eventos: React.FC = () => {
     try {
       const hdrs = { headers: MS_LOGIN_AUTH_HEADERS };
       const [resActivo, resProximo] = await Promise.all([
-        axios.get('https://api.t-ickets.com/ms_login/listareventos/ACTIVO/', hdrs),
-        axios.get('https://api.t-ickets.com/ms_login/listareventos/PROXIMO/', hdrs),
+        axios.get('https://api.t-ickets.com/ms_login/listareventos_publico/ACTIVO/', hdrs),
+        axios.get('https://api.t-ickets.com/ms_login/listareventos_publico/PROXIMO/', hdrs),
       ]);
       if (resActivo.data.success) {
         const hoy = new Date();
